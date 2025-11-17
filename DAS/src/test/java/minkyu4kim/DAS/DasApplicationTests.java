@@ -1,10 +1,10 @@
-package mkk4.spring_ai;
+package minkyu4kim.DAS;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class SpringAiApplicationTests {
+class DasApplicationTests {
 
 	@Test
 	void contextLoads() {

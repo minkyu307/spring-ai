@@ -1,13 +1,13 @@
-package mkk4.spring_ai;
+package minkyu4kim.DAS;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class SpringAiApplication {
+public class DasApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(SpringAiApplication.class, args);
+		SpringApplication.run(DasApplication.class, args);
 	}
 
 }
