@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hello - Spring AI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Google Sans', 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #f8f9fa;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 700px;
+            width: 100%;
+        }
+        .back-link {
+            color: #1967d2;
+            text-decoration: none;
+            font-size: 0.9em;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-bottom: 32px;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 48px 32px;
+            border: 1px solid #e8eaed;
+            text-align: center;
+        }
+        .emoji {
+            font-size: 3.5em;
+            margin-bottom: 24px;
+        }
+        h1 {
+            color: #202124;
+            font-size: 2em;
+            font-weight: 400;
+            margin-bottom: 16px;
+        }
+        .greeting {
+            color: #1967d2;
+            font-size: 1.5em;
+            font-weight: 500;
+            margin-bottom: 16px;
+        }
+        .message {
+            color: #5f6368;
+            font-size: 1em;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back-link">← 홈으로 돌아가기</a>
+        
+        <div class="card">
+            <div class="emoji">👋</div>
+            <h1>Hello!</h1>
+            <div class="greeting" th:text="'Hello, ' + ${name} + '!'">Hello, World!</div>
+            <div class="message" th:text="${message}">Welcome to Spring AI!</div>
+        </div>
+    </div>
+</body>
+</html>

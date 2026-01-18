@@ -1,13 +1,13 @@
-package minkyu307.sprina_ai;
+package minkyu307.spring_ai;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class SprinaAiApplication {
+public class SpringAiApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(SprinaAiApplication.class, args);
+		SpringApplication.run(SpringAiApplication.class, args);
 	}
 
 }

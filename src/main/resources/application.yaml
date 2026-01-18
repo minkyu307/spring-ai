@@ -1,3 +1,24 @@
 spring:
   application:
-    name: sprina-ai
+    name: spring-ai
+  datasource:
+    url: jdbc:postgresql://localhost:25432/spring_ai
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+  ai:
+    google:
+      genai:
+        project-id: test-pj-484705
+        api-key: AIzaSyCruV9DHpAY5DzDUxJvJj1igZtXb0D2y-M
+        chat:
+          options:
+            model: gemini-2.5-flash
+            temperature: 0.7
+  output:
+    ansi:
+      enabled: always
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true

@@ -9,9 +9,9 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>minkyu307</groupId>
-	<artifactId>sprina-ai</artifactId>
+	<artifactId>spring-ai</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>sprina-ai</name>
+	<name>spring-ai</name>
 	<description>AI based web server made with spirng ai</description>
 	<url/>
 	<licenses>

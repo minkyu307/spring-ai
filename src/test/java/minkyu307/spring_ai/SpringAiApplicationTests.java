@@ -1,10 +1,10 @@
-package minkyu307.sprina_ai;
+package minkyu307.spring_ai;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class SprinaAiApplicationTests {
+class SpringAiApplicationTests {
 
 	@Test
 	void contextLoads() {

@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chat - Spring AI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Google Sans', 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #f8f9fa;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            background: white;
+            border-bottom: 1px solid #e8eaed;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .header-title {
+            color: #202124;
+            font-size: 1.4em;
+            font-weight: 400;
+        }
+        .container {
+            flex: 1;
+            max-width: 1000px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-area {
+            flex: 1;
+            margin-bottom: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            overflow-y: auto;
+        }
+        .message-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px 24px;
+            border: 1px solid #e8eaed;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .message-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+            color: #5f6368;
+            font-size: 0.85em;
+            font-weight: 500;
+        }
+        .message-icon {
+            font-size: 1.2em;
+        }
+        .message-content {
+            color: #202124;
+            font-size: 0.95em;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .user-message {
+            border-left: 3px solid #1967d2;
+        }
+        .ai-message {
+            border-left: 3px solid #34a853;
+        }
+        .error-message {
+            border-left: 3px solid #ea4335;
+        }
+        .error-message .message-content {
+            color: #d93025;
+        }
+        .loading-message {
+            border-left: 3px solid #fbbc04;
+        }
+        .loading-dots {
+            display: inline-flex;
+            gap: 4px;
+            margin-left: 4px;
+        }
+        .loading-dots span {
+            width: 6px;
+            height: 6px;
+            background: #5f6368;
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+        .loading-dots span:nth-child(1) {
+            animation-delay: -0.32s;
+        }
+        .loading-dots span:nth-child(2) {
+            animation-delay: -0.16s;
+        }
+        @keyframes bounce {
+            0%, 80%, 100% {
+                transform: scale(0);
+            }
+            40% {
+                transform: scale(1);
+            }
+        }
+        .placeholder {
+            text-align: center;
+            padding: 80px 20px;
+            color: #5f6368;
+        }
+        .placeholder-icon {
+            font-size: 4em;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+        .placeholder-text {
+            font-size: 1.1em;
+        }
+        .input-area {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid #e8eaed;
+            position: sticky;
+            bottom: 24px;
+        }
+        form {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+        }
+        textarea {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #dadce0;
+            border-radius: 8px;
+            font-size: 0.95em;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 52px;
+            max-height: 200px;
+            transition: border-color 0.2s;
+        }
+        textarea:focus {
+            outline: none;
+            border-color: #1967d2;
+        }
+        textarea:disabled {
+            background: #f8f9fa;
+            cursor: not-allowed;
+        }
+        .btn {
+            padding: 14px 28px;
+            background: #1967d2;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95em;
+            cursor: pointer;
+            transition: background 0.2s;
+            white-space: nowrap;
+        }
+        .btn:hover:not(:disabled) {
+            background: #1557b0;
+        }
+        .btn:active:not(:disabled) {
+            background: #174ea6;
+        }
+        .btn:disabled {
+            background: #dadce0;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-title">Gemini AI Chat</div>
+    </div>
+
+    <div class="container">
+        <div class="chat-area" id="chatArea">
+            <!-- 초기 안내 메시지 -->
+            <div class="placeholder" id="placeholder">
+                <div class="placeholder-icon">💬</div>
+                <div class="placeholder-text">
+                    아래에 메시지를 입력하고 Gemini AI와 대화를 시작하세요
+                </div>
+            </div>
+        </div>
+
+        <div class="input-area">
+            <form id="chatForm">
+                <textarea 
+                    id="messageInput"
+                    name="message" 
+                    placeholder="메시지를 입력하세요..."
+                    required
+                    autofocus
+                    rows="1"></textarea>
+                <button type="submit" class="btn" id="sendButton">전송</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const chatArea = document.getElementById('chatArea');
+        const chatForm = document.getElementById('chatForm');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const placeholder = document.getElementById('placeholder');
+
+        // Conversation ID 관리 (브라우저별 고유 세션)
+        let conversationId = localStorage.getItem('conversationId');
+        if (!conversationId) {
+            conversationId = crypto.randomUUID();
+            localStorage.setItem('conversationId', conversationId);
+        }
+        console.log('Conversation ID:', conversationId);
+
+        // 자동 높이 조절
+        messageInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 200) + 'px';
+        });
+
+        // 메시지 추가 함수
+        function addMessage(content, type) {
+            // placeholder 제거
+            if (placeholder) {
+                placeholder.remove();
+            }
+
+            const messageCard = document.createElement('div');
+            messageCard.className = `message-card ${type}-message`;
+
+            const header = document.createElement('div');
+            header.className = 'message-header';
+
+            const icon = document.createElement('span');
+            icon.className = 'message-icon';
+            
+            const label = document.createElement('span');
+
+            if (type === 'user') {
+                icon.textContent = '👤';
+                label.textContent = 'You';
+            } else if (type === 'ai') {
+                icon.textContent = '✨';
+                label.textContent = 'Gemini';
+            } else if (type === 'error') {
+                icon.textContent = '⚠️';
+                label.textContent = 'Error';
+            } else if (type === 'loading') {
+                icon.textContent = '⏳';
+                label.textContent = 'Gemini';
+            }
+
+            header.appendChild(icon);
+            header.appendChild(label);
+
+            const messageContent = document.createElement('div');
+            messageContent.className = 'message-content';
+
+            if (type === 'loading') {
+                messageContent.innerHTML = 'Thinking<span class="loading-dots"><span></span><span></span><span></span></span>';
+            } else {
+                messageContent.textContent = content;
+            }
+
+            messageCard.appendChild(header);
+            messageCard.appendChild(messageContent);
+            chatArea.appendChild(messageCard);
+
+            // 스크롤 하단으로
+            chatArea.scrollTop = chatArea.scrollHeight;
+
+            return messageCard;
+        }
+
+        // 폼 제출 처리
+        chatForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const message = messageInput.value.trim();
+            if (!message) return;
+
+            // 사용자 메시지 추가
+            addMessage(message, 'user');
+
+            // 입력창 초기화 및 비활성화
+            messageInput.value = '';
+            messageInput.style.height = 'auto';
+            messageInput.disabled = true;
+            sendButton.disabled = true;
+
+            // 로딩 메시지 추가
+            const loadingCard = addMessage('', 'loading');
+
+            try {
+                // 서버로 메시지 전송 (conversationId 포함)
+                const response = await fetch('/api/chat/message', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        message: message,
+                        conversationId: conversationId
+                    })
+                });
+
+                const data = await response.json();
+
+                // 로딩 메시지 제거
+                loadingCard.remove();
+
+                if (data.success === 'true') {
+                    // AI 응답 추가
+                    addMessage(data.response, 'ai');
+                } else {
+                    // 에러 메시지 추가
+                    addMessage('AI 응답 중 오류가 발생했습니다: ' + data.error, 'error');
+                }
+            } catch (error) {
+                // 로딩 메시지 제거
+                loadingCard.remove();
+                // 에러 메시지 추가
+                addMessage('네트워크 오류가 발생했습니다: ' + error.message, 'error');
+            } finally {
+                // 입력창 활성화
+                messageInput.disabled = false;
+                sendButton.disabled = false;
+                messageInput.focus();
+            }
+        });
+
+        // Enter 키로 전송 (Shift+Enter는 줄바꿈)
+        messageInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                chatForm.dispatchEvent(new Event('submit'));
+            }
+        });
+    </script>
+</body>
+</html>
