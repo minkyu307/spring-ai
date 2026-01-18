@@ -5,7 +5,6 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-<<<<<<<< HEAD:pom.xml
 		<version>3.5.9</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
@@ -14,16 +13,6 @@
 	<version>0.0.1-SNAPSHOT</version>
 	<name>sprina-ai</name>
 	<description>AI based web server made with spirng ai</description>
-========
-		<version>3.5.7</version>
-		<relativePath/> <!-- lookup parent from repository -->
-	</parent>
-	<groupId>minkyu4kim</groupId>
-	<artifactId>DAS</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
-	<name>DAS</name>
-	<description>Document Augmented Search</description>
->>>>>>>> 571f4eb7526302d6cf629812e9676e52df56d22b:DAS/pom.xml
 	<url/>
 	<licenses>
 		<license/>
@@ -39,11 +28,7 @@
 	</scm>
 	<properties>
 		<java.version>21</java.version>
-<<<<<<<< HEAD:pom.xml
 		<spring-ai.version>1.1.2</spring-ai.version>
-========
-		<spring-ai.version>1.1.0</spring-ai.version>
->>>>>>>> 571f4eb7526302d6cf629812e9676e52df56d22b:DAS/pom.xml
 	</properties>
 	<dependencies>
 		<dependency>
@@ -52,45 +37,27 @@
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
-<<<<<<<< HEAD:pom.xml
 			<artifactId>spring-boot-starter-thymeleaf</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
-========
->>>>>>>> 571f4eb7526302d6cf629812e9676e52df56d22b:DAS/pom.xml
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.ai</groupId>
-<<<<<<<< HEAD:pom.xml
 			<artifactId>spring-ai-starter-model-google-genai</artifactId>
-========
-			<artifactId>spring-ai-advisors-vector-store</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.ai</groupId>
-			<artifactId>spring-ai-starter-model-chat-memory-repository-jdbc</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.ai</groupId>
-			<artifactId>spring-ai-starter-model-google-genai</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.ai</groupId>
-			<artifactId>spring-ai-starter-vector-store-pgvector</artifactId>
->>>>>>>> 571f4eb7526302d6cf629812e9676e52df56d22b:DAS/pom.xml
 		</dependency>
 
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-devtools</artifactId>
+			<scope>runtime</scope>
+			<optional>true</optional>
+		</dependency>
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
 			<scope>runtime</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-configuration-processor</artifactId>
-			<optional>true</optional>
 		</dependency>
 		<dependency>
 			<groupId>org.projectlombok</groupId>
