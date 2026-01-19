@@ -10,7 +10,7 @@ spring:
     google:
       genai:
         project-id: test-pj-484705
-        api-key: AIzaSyCruV9DHpAY5DzDUxJvJj1igZtXb0D2y-M
+        api-key: ${GEMINI_API_KEY}
         chat:
           options:
             model: gemini-2.5-flash
