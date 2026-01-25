@@ -15,6 +15,11 @@ spring:
           options:
             model: gemini-2.5-flash
             temperature: 0.7
+    chat:
+      memory:
+        repository:
+          jdbc:
+            initialize-schema: always  # PostgreSQL에 스키마 자동 생성
   output:
     ansi:
       enabled: always
