@@ -25,5 +25,6 @@ spring:
       enabled: always
   jpa:
     hibernate:
-      ddl-auto: update
+      # Spring AI가 만든 spring_ai_chat_memory 테이블을 JPA가 변경하지 않도록 validate 사용
+      ddl-auto: validate
     show-sql: true

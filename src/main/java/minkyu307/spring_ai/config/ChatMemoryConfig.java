@@ -15,11 +15,11 @@ import org.springframework.jdbc.core.JdbcTemplate;
 public class ChatMemoryConfig {
 
 	/**
-	 * JdbcChatMemoryRepository 빈 등록
-	 * PostgreSQL 데이터베이스에 채팅 메모리 저장
+	 * JdbcChatMemoryRepository 빈 등록 (빈 이름: jdbcChatMemoryRepository)
+	 * JPA ChatMemoryRepository와 이름 충돌 방지
 	 */
 	@Bean
-	public JdbcChatMemoryRepository chatMemoryRepository(JdbcTemplate jdbcTemplate) {
+	public JdbcChatMemoryRepository jdbcChatMemoryRepository(JdbcTemplate jdbcTemplate) {
 		return JdbcChatMemoryRepository.builder()
 				.jdbcTemplate(jdbcTemplate)
 				.build();
@@ -27,13 +27,12 @@ public class ChatMemoryConfig {
 
 	/**
 	 * MessageWindowChatMemory 빈 등록
-	 * 최근 20개 메시지만 유지하는 슬라이딩 윈도우 방식
-	 * JdbcChatMemoryRepository를 사용하여 PostgreSQL에 영구 저장
+	 * jdbcChatMemoryRepository를 사용하여 PostgreSQL에 영구 저장
 	 */
 	@Bean
-	public ChatMemory chatMemory(JdbcChatMemoryRepository chatMemoryRepository) {
+	public ChatMemory chatMemory(JdbcChatMemoryRepository jdbcChatMemoryRepository) {
 		return MessageWindowChatMemory.builder()
-				.chatMemoryRepository(chatMemoryRepository)
+				.chatMemoryRepository(jdbcChatMemoryRepository)
 				.maxMessages(20)  // 최대 20개 메시지 유지
 				.build();
 	}

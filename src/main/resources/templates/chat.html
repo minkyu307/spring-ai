@@ -10,14 +10,18 @@
             padding: 0;
             box-sizing: border-box;
         }
+        /* 뷰포트 고정으로 body 스크롤 방지, 헤더/사이드바 고정 후 채팅 영역만 스크롤 */
         body {
             font-family: 'Google Sans', 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
             background: #f8f9fa;
+            height: 100vh;
             min-height: 100vh;
+            overflow: hidden;
             display: flex;
             flex-direction: column;
         }
         .header {
+            flex-shrink: 0;
             background: white;
             border-bottom: 1px solid #e8eaed;
             padding: 16px 24px;
@@ -30,22 +34,92 @@
             font-size: 1.4em;
             font-weight: 400;
         }
-        .container {
+        .main-layout {
             flex: 1;
-            max-width: 1000px;
-            width: 100%;
-            margin: 0 auto;
-            padding: 24px;
+            min-height: 0;
+            display: flex;
+            overflow: hidden;
+        }
+        .sidebar {
+            flex-shrink: 0;
+            width: 280px;
+            background: white;
+            border-right: 1px solid #e8eaed;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
         }
+        .sidebar-header {
+            padding: 16px;
+            border-bottom: 1px solid #e8eaed;
+        }
+        .new-chat-btn {
+            width: 100%;
+            padding: 12px 16px;
+            background: #1967d2;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95em;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .new-chat-btn:hover {
+            background: #1557b0;
+        }
+        .history-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+        .history-item {
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-bottom: 4px;
+        }
+        .history-item:hover {
+            background: #f1f3f4;
+        }
+        .history-item.active {
+            background: #e8f0fe;
+        }
+        .history-title {
+            font-size: 0.9em;
+            color: #202124;
+            margin-bottom: 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .history-meta {
+            font-size: 0.75em;
+            color: #5f6368;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .chat-container {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        /* 대화 메시지 영역만 스크롤, 헤더/사이드바/입력창은 고정 */
         .chat-area {
             flex: 1;
-            margin-bottom: 24px;
+            min-height: 0;
+            padding: 24px;
+            overflow-y: auto;
             display: flex;
             flex-direction: column;
             gap: 16px;
-            overflow-y: auto;
         }
         .message-card {
             background: white;
@@ -80,9 +154,25 @@
             color: #202124;
             font-size: 0.95em;
             line-height: 1.6;
-            white-space: pre-wrap;
             word-wrap: break-word;
         }
+        /* 마크다운 렌더링 스타일: 제목·리스트·코드·인용구·테이블 */
+        .message-content h1, .message-content h2, .message-content h3 { margin: 1em 0 0.5em; font-weight: 600; }
+        .message-content h1 { font-size: 1.35em; }
+        .message-content h2 { font-size: 1.2em; }
+        .message-content h3 { font-size: 1.05em; }
+        .message-content p { margin: 0.5em 0; }
+        .message-content ul, .message-content ol { margin: 0.5em 0; padding-left: 1.5em; }
+        .message-content li { margin: 0.25em 0; }
+        .message-content pre { margin: 0.75em 0; padding: 12px; background: #f1f3f4; border-radius: 8px; overflow-x: auto; }
+        .message-content code { background: #f1f3f4; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+        .message-content pre code { background: none; padding: 0; }
+        .message-content blockquote { margin: 0.5em 0; padding-left: 1em; border-left: 4px solid #dadce0; color: #5f6368; }
+        .message-content table { border-collapse: collapse; margin: 0.75em 0; width: 100%; }
+        .message-content th, .message-content td { border: 1px solid #e8eaed; padding: 8px 12px; text-align: left; }
+        .message-content th { background: #f8f9fa; font-weight: 600; }
+        .message-content a { color: #1967d2; text-decoration: none; }
+        .message-content a:hover { text-decoration: underline; }
         .user-message {
             border-left: 3px solid #1967d2;
         }
@@ -128,6 +218,7 @@
             text-align: center;
             padding: 80px 20px;
             color: #5f6368;
+            margin: auto;
         }
         .placeholder-icon {
             font-size: 4em;
@@ -138,12 +229,10 @@
             font-size: 1.1em;
         }
         .input-area {
+            flex-shrink: 0;
             background: white;
-            border-radius: 12px;
-            padding: 16px;
-            border: 1px solid #e8eaed;
-            position: sticky;
-            bottom: 24px;
+            border-top: 1px solid #e8eaed;
+            padding: 16px 24px;
         }
         form {
             display: flex;
@@ -191,6 +280,25 @@
             background: #dadce0;
             cursor: not-allowed;
         }
+        .empty-history {
+            text-align: center;
+            padding: 40px 20px;
+            color: #5f6368;
+            font-size: 0.9em;
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                left: -280px;
+                top: 0;
+                bottom: 0;
+                z-index: 1000;
+                transition: left 0.3s;
+            }
+            .sidebar.open {
+                left: 0;
+            }
+        }
     </style>
 </head>
 <body>
@@ -198,45 +306,188 @@
         <div class="header-title">Gemini AI Chat</div>
     </div>
 
-    <div class="container">
-        <div class="chat-area" id="chatArea">
-            <!-- 초기 안내 메시지 -->
-            <div class="placeholder" id="placeholder">
-                <div class="placeholder-icon">💬</div>
-                <div class="placeholder-text">
-                    아래에 메시지를 입력하고 Gemini AI와 대화를 시작하세요
-                </div>
+    <div class="main-layout">
+        <!-- 사이드바 -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <button class="new-chat-btn" id="newChatBtn">
+                    <span>➕</span>
+                    <span>새 대화</span>
+                </button>
+            </div>
+            <div class="history-list" id="historyList">
+                <div class="empty-history">히스토리를 불러오는 중...</div>
             </div>
         </div>
 
-        <div class="input-area">
-            <form id="chatForm">
-                <textarea 
-                    id="messageInput"
-                    name="message" 
-                    placeholder="메시지를 입력하세요..."
-                    required
-                    autofocus
-                    rows="1"></textarea>
-                <button type="submit" class="btn" id="sendButton">전송</button>
-            </form>
+        <!-- 메인 채팅 영역 -->
+        <div class="chat-container">
+            <div class="chat-area" id="chatArea">
+                <div class="placeholder" id="placeholder">
+                    <div class="placeholder-icon">💬</div>
+                    <div class="placeholder-text">
+                        왼쪽에서 대화를 선택하거나 새 대화를 시작하세요
+                    </div>
+                </div>
+            </div>
+
+            <div class="input-area">
+                <form id="chatForm">
+                    <textarea 
+                        id="messageInput"
+                        name="message" 
+                        placeholder="메시지를 입력하세요..."
+                        required
+                        rows="1"></textarea>
+                    <button type="submit" class="btn" id="sendButton">전송</button>
+                </form>
+            </div>
         </div>
     </div>
 
+    <!-- 마크다운 렌더링: marked(파싱) + DOMPurify(XSS 방지) -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
     <script>
         const chatArea = document.getElementById('chatArea');
         const chatForm = document.getElementById('chatForm');
         const messageInput = document.getElementById('messageInput');
         const sendButton = document.getElementById('sendButton');
         const placeholder = document.getElementById('placeholder');
+        const historyList = document.getElementById('historyList');
+        const newChatBtn = document.getElementById('newChatBtn');
 
-        // Conversation ID 관리 (브라우저별 고유 세션)
+        // Conversation ID 관리
         let conversationId = localStorage.getItem('conversationId');
         if (!conversationId) {
             conversationId = crypto.randomUUID();
             localStorage.setItem('conversationId', conversationId);
         }
-        console.log('Conversation ID:', conversationId);
+
+        // 히스토리 목록 로드
+        async function loadHistories() {
+            try {
+                const response = await fetch('/api/chat/histories');
+                const histories = await response.json();
+                
+                if (histories.length === 0) {
+                    historyList.innerHTML = '<div class="empty-history">대화 히스토리가 없습니다</div>';
+                    return;
+                }
+
+                historyList.innerHTML = '';
+                histories.forEach(history => {
+                    const item = document.createElement('div');
+                    item.className = 'history-item';
+                    if (history.conversationId === conversationId) {
+                        item.classList.add('active');
+                    }
+                    
+                    const title = document.createElement('div');
+                    title.className = 'history-title';
+                    title.textContent = history.title;
+                    
+                    const meta = document.createElement('div');
+                    meta.className = 'history-meta';
+                    const date = new Date(history.lastUpdated);
+                    meta.innerHTML = `
+                        <span>${formatDate(date)}</span>
+                        <span>${history.messageCount}개</span>
+                    `;
+                    
+                    item.appendChild(title);
+                    item.appendChild(meta);
+                    
+                    item.addEventListener('click', (e) => {
+                        selectHistory(history.conversationId, e.currentTarget);
+                    });
+                    
+                    historyList.appendChild(item);
+                });
+            } catch (error) {
+                console.error('히스토리 로드 실패:', error);
+                historyList.innerHTML = '<div class="empty-history">히스토리 로드 실패</div>';
+            }
+        }
+
+        // 날짜 포맷팅
+        function formatDate(date) {
+            const now = new Date();
+            const diff = now - date;
+            const minutes = Math.floor(diff / 60000);
+            const hours = Math.floor(diff / 3600000);
+            const days = Math.floor(diff / 86400000);
+
+            if (minutes < 1) return '방금 전';
+            if (minutes < 60) return `${minutes}분 전`;
+            if (hours < 24) return `${hours}시간 전`;
+            if (days < 7) return `${days}일 전`;
+            return date.toLocaleDateString('ko-KR');
+        }
+
+        // 히스토리 선택
+        async function selectHistory(id, clickedElement) {
+            conversationId = id;
+            localStorage.setItem('conversationId', conversationId);
+            
+            // 활성 상태 업데이트
+            document.querySelectorAll('.history-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            if (clickedElement) {
+                clickedElement.classList.add('active');
+            }
+            
+            // 대화 내용 로드
+            await loadHistoryMessages(id);
+            
+            // 히스토리 목록 새로고침
+            await loadHistories();
+        }
+
+        // 특정 히스토리의 메시지 로드
+        async function loadHistoryMessages(id) {
+            try {
+                const response = await fetch(`/api/chat/histories/${id}`);
+                const historyDetail = await response.json();
+                
+                // 채팅 영역 초기화
+                chatArea.innerHTML = '';
+                if (placeholder) placeholder.remove();
+                
+                // 메시지 표시
+                historyDetail.messages.forEach(msg => {
+                    const type = msg.role === 'user' ? 'user' : 'ai';
+                    addMessage(msg.content, type, false);
+                });
+                
+                // 스크롤 하단으로
+                chatArea.scrollTop = chatArea.scrollHeight;
+            } catch (error) {
+                console.error('메시지 로드 실패:', error);
+                addMessage('대화 내용을 불러오는 중 오류가 발생했습니다.', 'error');
+            }
+        }
+
+        // 새 대화 시작
+        newChatBtn.addEventListener('click', () => {
+            conversationId = crypto.randomUUID();
+            localStorage.setItem('conversationId', conversationId);
+            
+            // 채팅 영역 초기화
+            chatArea.innerHTML = '';
+            const newPlaceholder = document.createElement('div');
+            newPlaceholder.className = 'placeholder';
+            newPlaceholder.id = 'placeholder';
+            newPlaceholder.innerHTML = `
+                <div class="placeholder-icon">💬</div>
+                <div class="placeholder-text">새 대화를 시작하세요</div>
+            `;
+            chatArea.appendChild(newPlaceholder);
+            
+            // 히스토리 목록 새로고침
+            loadHistories();
+        });
 
         // 자동 높이 조절
         messageInput.addEventListener('input', function() {
@@ -245,10 +496,11 @@
         });
 
         // 메시지 추가 함수
-        function addMessage(content, type) {
+        function addMessage(content, type, scroll = true) {
             // placeholder 제거
-            if (placeholder) {
-                placeholder.remove();
+            const existingPlaceholder = document.getElementById('placeholder');
+            if (existingPlaceholder) {
+                existingPlaceholder.remove();
             }
 
             const messageCard = document.createElement('div');
@@ -284,8 +536,12 @@
 
             if (type === 'loading') {
                 messageContent.innerHTML = 'Thinking<span class="loading-dots"><span></span><span></span><span></span></span>';
-            } else {
+            } else if (type === 'error') {
                 messageContent.textContent = content;
+            } else {
+                // user·ai 메시지: 마크다운 → HTML 변환 후 DOMPurify로 sanitize
+                const rawHtml = typeof marked !== 'undefined' ? marked.parse(content || '') : (content || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                messageContent.innerHTML = typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(rawHtml) : rawHtml;
             }
 
             messageCard.appendChild(header);
@@ -293,7 +549,9 @@
             chatArea.appendChild(messageCard);
 
             // 스크롤 하단으로
-            chatArea.scrollTop = chatArea.scrollHeight;
+            if (scroll) {
+                chatArea.scrollTop = chatArea.scrollHeight;
+            }
 
             return messageCard;
         }
@@ -338,6 +596,8 @@
                 if (data.success === 'true') {
                     // AI 응답 추가
                     addMessage(data.response, 'ai');
+                    // 히스토리 목록 새로고침
+                    loadHistories();
                 } else {
                     // 에러 메시지 추가
                     addMessage('AI 응답 중 오류가 발생했습니다: ' + data.error, 'error');
@@ -362,6 +622,14 @@
                 chatForm.dispatchEvent(new Event('submit'));
             }
         });
+
+        // 페이지 로드 시 히스토리 목록 불러오기
+        loadHistories();
+        
+        // 현재 conversationId에 해당하는 히스토리가 있으면 로드
+        if (conversationId && conversationId !== 'default') {
+            loadHistoryMessages(conversationId).catch(console.error);
+        }
     </script>
 </body>
 </html>
