@@ -16,10 +16,10 @@ public class ChatMemoryConfig {
 
 	/**
 	 * JdbcChatMemoryRepository 빈 등록 (빈 이름: jdbcChatMemoryRepository)
-	 * JPA ChatMemoryRepository와 이름 충돌 방지
+	 * spring_ai_chat_memory 테이블은 Spring AI JDBC 경로로만 사용 // JPA 엔티티 매핑 제거
 	 */
 	@Bean
-	public JdbcChatMemoryRepository jdbcChatMemoryRepository(JdbcTemplate jdbcTemplate) {
+	JdbcChatMemoryRepository jdbcChatMemoryRepository(JdbcTemplate jdbcTemplate) {
 		return JdbcChatMemoryRepository.builder()
 				.jdbcTemplate(jdbcTemplate)
 				.build();
@@ -30,7 +30,7 @@ public class ChatMemoryConfig {
 	 * jdbcChatMemoryRepository를 사용하여 PostgreSQL에 영구 저장
 	 */
 	@Bean
-	public ChatMemory chatMemory(JdbcChatMemoryRepository jdbcChatMemoryRepository) {
+	ChatMemory chatMemory(JdbcChatMemoryRepository jdbcChatMemoryRepository) {
 		return MessageWindowChatMemory.builder()
 				.chatMemoryRepository(jdbcChatMemoryRepository)
 				.maxMessages(20)  // 최대 20개 메시지 유지

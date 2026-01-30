@@ -11,10 +11,25 @@ spring:
       genai:
         project-id: test-pj-484705
         api-key: ${GEMINI_API_KEY}
+        embedding:
+          api-key: ${GEMINI_API_KEY}
+          text:
+            options:
+              model: text-embedding-004
+              dimensions: 768
         chat:
           options:
             model: gemini-2.5-flash
             temperature: 0.7
+    model:
+      embedding:
+        text: google-genai
+    vectorstore:
+      pgvector:
+        initialize-schema: true
+        index-type: HNSW
+        distance-type: COSINE_DISTANCE
+        dimensions: 768
     chat:
       memory:
         repository:
@@ -25,6 +40,6 @@ spring:
       enabled: always
   jpa:
     hibernate:
-      # Spring AI가 만든 spring_ai_chat_memory 테이블을 JPA가 변경하지 않도록 validate 사용
-      ddl-auto: validate
+      # 애플리케이션 엔티티만 Hibernate가 DDL 관리(채팅 메모리 테이블은 JPA 매핑 제거) // 개발 편의용
+      ddl-auto: update
     show-sql: true

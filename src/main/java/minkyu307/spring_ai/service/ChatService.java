@@ -3,8 +3,7 @@ package minkyu307.spring_ai.service;
 import minkyu307.spring_ai.dto.ChatHistoryDetailDto;
 import minkyu307.spring_ai.dto.ChatHistoryDto;
 import minkyu307.spring_ai.dto.ChatMessageDto;
-import minkyu307.spring_ai.entity.ChatMemoryEntity;
-import minkyu307.spring_ai.repository.ChatMemoryRepository;
+import minkyu307.spring_ai.repository.ChatMemoryJdbcQueryRepository;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
@@ -17,21 +16,21 @@ import java.util.stream.Collectors;
 /**
  * Google Gemini AI와 상호작용하는 채팅 서비스
  * Spring AI 공식 ChatMemory API 사용
- * Spring Data JPA를 사용하여 히스토리 조회
+ * spring_ai_chat_memory 테이블은 JDBC로 조회하여 히스토리 제공 // Hibernate DDL 영향 배제
  */
 @Service
 public class ChatService {
 
 	private final ChatClient chatClient;
-	private final ChatMemoryRepository chatMemoryRepository;
+	private final ChatMemoryJdbcQueryRepository chatMemoryJdbcQueryRepository;
 
 	public ChatService(ChatClient.Builder chatClientBuilder, ChatMemory chatMemory,
-			ChatMemoryRepository chatMemoryRepository) {
+			ChatMemoryJdbcQueryRepository chatMemoryJdbcQueryRepository) {
 		// MessageChatMemoryAdvisor를 사용하여 메모리 자동 관리
 		this.chatClient = chatClientBuilder
 				.defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory).build())
 				.build();
-		this.chatMemoryRepository = chatMemoryRepository;
+		this.chatMemoryJdbcQueryRepository = chatMemoryJdbcQueryRepository;
 	}
 
 	/**
@@ -51,17 +50,17 @@ public class ChatService {
 	 * Spring Data JPA를 사용하여 조회
 	 */
 	public List<ChatHistoryDto> findAllHistories() {
-		return chatMemoryRepository.findHistorySummaries().stream()
-				.map(projection -> {
-					String conversationId = projection.getConversationId();
-					String firstMessage = projection.getFirstUserMessage();
+		return chatMemoryJdbcQueryRepository.findHistorySummaries().stream()
+				.map(summary -> {
+					String conversationId = summary.conversationId();
+					String firstMessage = summary.firstUserMessage();
 					String title = firstMessage != null && firstMessage.length() > 50 
 							? firstMessage.substring(0, 50) + "..." 
 							: (firstMessage != null ? firstMessage : "새 대화");
-					Instant lastUpdated = projection.getLastUpdated() != null 
-							? projection.getLastUpdated() 
+					Instant lastUpdated = summary.lastUpdated() != null
+							? summary.lastUpdated()
 							: Instant.now();
-					int messageCount = projection.getMessageCount().intValue();
+					int messageCount = Math.toIntExact(summary.messageCount());
 					
 					return new ChatHistoryDto(conversationId, title, lastUpdated, messageCount);
 				})
@@ -73,18 +72,18 @@ public class ChatService {
 	 * Spring Data JPA를 사용하여 조회
 	 */
 	public ChatHistoryDetailDto findHistoryMessages(String conversationId) {
-		List<ChatMemoryEntity> entities = chatMemoryRepository
-				.findByConversationIdOrderByTimestampAsc(conversationId);
+		List<ChatMemoryJdbcQueryRepository.ChatMemoryMessage> rows =
+				chatMemoryJdbcQueryRepository.findMessagesByConversationIdOrderByTimestampAsc(conversationId);
 		
-		List<ChatMessageDto> messages = entities.stream()
-				.map(entity -> {
-					String type = entity.getType();
+		List<ChatMessageDto> messages = rows.stream()
+				.map(row -> {
+					String type = row.type();
 					String role = "USER".equals(type) ? "user" 
 							: "ASSISTANT".equals(type) ? "assistant" 
 							: "system";
-					String content = entity.getContent();
-					Instant timestamp = entity.getTimestamp() != null 
-							? entity.getTimestamp() 
+					String content = row.content();
+					Instant timestamp = row.timestamp() != null
+							? row.timestamp()
 							: Instant.now();
 					
 					return new ChatMessageDto(role, content, timestamp);
