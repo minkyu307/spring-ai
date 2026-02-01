@@ -6,7 +6,10 @@ import minkyu307.spring_ai.dto.ChatMessageDto;
 import minkyu307.spring_ai.repository.ChatMemoryJdbcQueryRepository;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
+import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.ai.vectorstore.SearchRequest;
+import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -17,6 +20,7 @@ import java.util.stream.Collectors;
  * Google Gemini AI와 상호작용하는 채팅 서비스
  * Spring AI 공식 ChatMemory API 사용
  * spring_ai_chat_memory 테이블은 JDBC로 조회하여 히스토리 제공 // Hibernate DDL 영향 배제
+ * QuestionAnswerAdvisor를 통해 VectorStore(PGvector) 기반 RAG를 적용한다.
  */
 @Service
 public class ChatService {
@@ -25,11 +29,22 @@ public class ChatService {
 	private final ChatMemoryJdbcQueryRepository chatMemoryJdbcQueryRepository;
 
 	public ChatService(ChatClient.Builder chatClientBuilder, ChatMemory chatMemory,
+			VectorStore vectorStore,
 			ChatMemoryJdbcQueryRepository chatMemoryJdbcQueryRepository) {
-		// MessageChatMemoryAdvisor를 사용하여 메모리 자동 관리
-		this.chatClient = chatClientBuilder
-				.defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory).build())
+		QuestionAnswerAdvisor qaAdvisor = QuestionAnswerAdvisor.builder(vectorStore)
+				.searchRequest(SearchRequest.builder()
+						.topK(8)
+						.similarityThresholdAll()
+						.build())
 				.build();
+
+		this.chatClient = chatClientBuilder
+				.defaultAdvisors(
+						MessageChatMemoryAdvisor.builder(chatMemory).build(),
+						qaAdvisor
+				)
+				.build();
+
 		this.chatMemoryJdbcQueryRepository = chatMemoryJdbcQueryRepository;
 	}
 

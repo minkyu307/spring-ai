@@ -315,12 +315,10 @@
                     <span>새 대화</span>
                 </button>
                 <div style="height: 10px;"></div>
-                <button class="new-chat-btn" id="ragUploadBtn" style="background:#5f6368;">
-                    <span>📄</span>
-                    <span>RAG문서 삽입</span>
-                </button>
-                <input id="ragFileInput" type="file" accept=".txt,.md,.markdown,text/plain,text/markdown" style="display:none;" />
-                <div id="ragUploadStatus" style="margin-top:10px;color:#5f6368;font-size:0.8em;"></div>
+                <a href="/rag/documents" class="new-chat-btn" style="background:#34a853;text-decoration:none;">
+                    <span>📚</span>
+                    <span>문서 관리</span>
+                </a>
             </div>
             <div class="history-list" id="historyList">
                 <div class="empty-history">히스토리를 불러오는 중...</div>
@@ -363,9 +361,6 @@
         const placeholder = document.getElementById('placeholder');
         const historyList = document.getElementById('historyList');
         const newChatBtn = document.getElementById('newChatBtn');
-        const ragUploadBtn = document.getElementById('ragUploadBtn');
-        const ragFileInput = document.getElementById('ragFileInput');
-        const ragUploadStatus = document.getElementById('ragUploadStatus');
 
         // Conversation ID 관리
         let conversationId = localStorage.getItem('conversationId');
@@ -497,42 +492,6 @@
             
             // 히스토리 목록 새로고침
             loadHistories();
-        });
-
-        // RAG 문서 업로드
-        ragUploadBtn.addEventListener('click', () => {
-            ragFileInput.click();
-        });
-
-        ragFileInput.addEventListener('change', async () => {
-            const file = ragFileInput.files && ragFileInput.files[0];
-            if (!file) return;
-
-            ragUploadBtn.disabled = true;
-            ragUploadStatus.textContent = `업로드 중: ${file.name}`;
-
-            try {
-                const form = new FormData();
-                form.append('file', file);
-
-                const response = await fetch('/api/rag/documents/upload', {
-                    method: 'POST',
-                    body: form
-                });
-
-                if (!response.ok) {
-                    const text = await response.text();
-                    throw new Error(`업로드 실패 (${response.status}): ${text || response.statusText}`);
-                }
-
-                const data = await response.json();
-                ragUploadStatus.textContent = `적재 완료: ${file.name} (청크 ${data.chunksIngested}개)`;
-            } catch (e) {
-                ragUploadStatus.textContent = `적재 실패: ${e.message}`;
-            } finally {
-                ragUploadBtn.disabled = false;
-                ragFileInput.value = '';
-            }
         });
 
         // 자동 높이 조절

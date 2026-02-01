@@ -2,6 +2,8 @@ package minkyu307.spring_ai.controller;
 
 import minkyu307.spring_ai.dto.DocumentIngestRequest;
 import minkyu307.spring_ai.dto.DocumentIngestResponse;
+import minkyu307.spring_ai.dto.RagDocumentListItemDto;
+import minkyu307.spring_ai.service.RagDocumentManagementService;
 import minkyu307.spring_ai.service.DocumentIngestionService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -9,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -20,9 +23,19 @@ import java.util.Map;
 public class RagDocumentController {
 
 	private final DocumentIngestionService ingestionService;
+	private final RagDocumentManagementService managementService;
 
-	public RagDocumentController(DocumentIngestionService ingestionService) {
+	public RagDocumentController(DocumentIngestionService ingestionService, RagDocumentManagementService managementService) {
 		this.ingestionService = ingestionService;
+		this.managementService = managementService;
+	}
+
+	/**
+	 * Vector DB에 적재된 문서 목록을 조회한다. // docId 단위로 그룹핑
+	 */
+	@GetMapping
+	public ResponseEntity<List<RagDocumentListItemDto>> list() {
+		return ResponseEntity.ok(managementService.listDocuments());
 	}
 
 	/**
@@ -61,6 +74,15 @@ public class RagDocumentController {
 		metadata.put("contentType", file.getContentType());
 
 		return ResponseEntity.ok(ingestionService.ingest(new DocumentIngestRequest(content, metadata)));
+	}
+
+	/**
+	 * 문서를 삭제한다. // docId(메타데이터) 또는 row id(uuid) 기반
+	 */
+	@DeleteMapping("/{docId}")
+	public ResponseEntity<Void> delete(@PathVariable String docId) {
+		managementService.deleteDocument(docId);
+		return ResponseEntity.noContent().build();
 	}
 }
 
