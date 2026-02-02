@@ -1,6 +1,5 @@
 package minkyu307.spring_ai.service;
 
-import minkyu307.spring_ai.dto.DocumentIngestRequest;
 import minkyu307.spring_ai.dto.DocumentIngestResponse;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.document.Document;
@@ -9,6 +8,7 @@ import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -32,27 +32,66 @@ public class DocumentIngestionService {
 	/**
 	 * 입력 문서를 청크로 분할한 뒤 VectorStore(PGvector)에 저장한다.
 	 */
-	public DocumentIngestResponse ingest(DocumentIngestRequest request) {
-		if (request == null || request.content() == null || request.content().isBlank()) {
-			return new DocumentIngestResponse(0);
+	public DocumentIngestResponse ingest(String content, Map<String, Object> metadata) {
+		IngestionResult result = ingestDocuments(List.of(new Document(content, metadata == null ? Map.of() : metadata)), metadata);
+		return new DocumentIngestResponse(result.chunksIngested());
+	}
+
+	/**
+	 * DocumentReader 결과(List&lt;Document&gt;)를 그대로 받아 VectorStore에 적재한다. // URL/PDF/HTML 등 공용
+	 */
+	public IngestionResult ingestDocuments(List<Document> documents, Map<String, Object> baseMetadata) {
+		if (documents == null || documents.isEmpty()) {
+			return new IngestionResult(null, null, 0, 0);
 		}
 
-		Map<String, Object> metadata = request.metadata() == null ? Map.of() : request.metadata();
-		metadata = new java.util.HashMap<>(metadata);
-		metadata.putIfAbsent("source", "api");
-		metadata.putIfAbsent("ingestedAt", Instant.now().toString());
-		metadata.putIfAbsent("docId", UUID.randomUUID().toString());
+		Map<String, Object> base = baseMetadata == null ? Map.of() : baseMetadata;
+		String docId = base.get("docId") instanceof String s && !s.isBlank()
+				? s
+				: UUID.randomUUID().toString();
 
-		if (!metadata.containsKey("title")) {
-			String generatedTitle = generateTitle(request.content(), (String) metadata.get("filename"));
-			metadata.put("title", generatedTitle);
+		String ingestedAt = Instant.now().toString();
+
+		List<Document> enriched = documents.stream()
+				.filter(d -> d != null && d.getText() != null && !d.getText().isBlank())
+				.map(d -> {
+					Map<String, Object> merged = new HashMap<>(d.getMetadata() == null ? Map.of() : d.getMetadata());
+					merged.putAll(base);
+					merged.putIfAbsent("source", "api");
+					merged.putIfAbsent("ingestedAt", ingestedAt);
+					merged.putIfAbsent("docId", docId);
+					return new Document(d.getText(), merged);
+				})
+				.toList();
+
+		if (enriched.isEmpty()) {
+			return new IngestionResult(docId, null, 0, 0);
 		}
 
-		Document document = new Document(request.content(), metadata);
-		List<Document> chunks = splitter.apply(List.of(document));
+		String title = findOrGenerateTitle(enriched, base);
+		enriched = enriched.stream()
+				.map(d -> {
+					Map<String, Object> merged = new HashMap<>(d.getMetadata());
+					merged.putIfAbsent("title", title);
+					return new Document(d.getText(), merged);
+				})
+				.toList();
 
+		List<Document> chunks = splitter.apply(enriched);
 		vectorStore.add(chunks);
-		return new DocumentIngestResponse(chunks.size());
+
+		return new IngestionResult(docId, title, enriched.size(), chunks.size());
+	}
+
+	/**
+	 * 적재 결과(문서 그룹 단위) 반환값.
+	 */
+	public record IngestionResult(
+			String docId,
+			String title,
+			int documentsRead,
+			int chunksIngested
+	) {
 	}
 
 	/**
@@ -119,6 +158,17 @@ public class DocumentIngestionService {
 			return t.substring(1, t.length() - 1).strip();
 		}
 		return t;
+	}
+
+	private String findOrGenerateTitle(List<Document> documents, Map<String, Object> baseMetadata) {
+		String existing = documents.get(0).getMetadata() != null ? (String) documents.get(0).getMetadata().get("title") : null;
+		if (existing != null && !existing.isBlank()) {
+			return firstNCodePoints(existing, 20);
+		}
+
+		String filename = baseMetadata != null ? (String) baseMetadata.get("filename") : null;
+		String sample = documents.get(0).getText();
+		return generateTitle(sample, filename);
 	}
 }
 

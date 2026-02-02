@@ -1,7 +1,0 @@
----
-description: 
-alwaysApply: true
----
-
-The technical specifications for this project are as follows. 
-Java 21, Spring Boot 3.5.9, Spring Data JPA, lombok, RESTful API, Postgresql 18 DB, pgvector
