@@ -1,640 +1,713 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Chat - Spring AI</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        /* 뷰포트 고정으로 body 스크롤 방지, 헤더/사이드바 고정 후 채팅 영역만 스크롤 */
-        body {
-            font-family: 'Google Sans', 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: #f8f9fa;
-            height: 100vh;
-            min-height: 100vh;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        }
-        .header {
-            flex-shrink: 0;
-            background: white;
-            border-bottom: 1px solid #e8eaed;
-            padding: 16px 24px;
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-        .header-title {
-            color: #202124;
-            font-size: 1.4em;
-            font-weight: 400;
-        }
-        .main-layout {
-            flex: 1;
-            min-height: 0;
-            display: flex;
-            overflow: hidden;
-        }
-        .sidebar {
-            flex-shrink: 0;
-            width: 280px;
-            background: white;
-            border-right: 1px solid #e8eaed;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-        .sidebar-header {
-            padding: 16px;
-            border-bottom: 1px solid #e8eaed;
-        }
-        .new-chat-btn {
-            width: 100%;
-            padding: 12px 16px;
-            background: #1967d2;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 0.95em;
-            cursor: pointer;
-            transition: background 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-        .new-chat-btn:hover {
-            background: #1557b0;
-        }
-        .history-list {
-            flex: 1;
-            overflow-y: auto;
-            padding: 8px;
-        }
-        .history-item {
-            padding: 12px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background 0.2s;
-            margin-bottom: 4px;
-        }
-        .history-item:hover {
-            background: #f1f3f4;
-        }
-        .history-item.active {
-            background: #e8f0fe;
-        }
-        .history-title {
-            font-size: 0.9em;
-            color: #202124;
-            margin-bottom: 4px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        .history-meta {
-            font-size: 0.75em;
-            color: #5f6368;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .chat-container {
-            flex: 1;
-            min-height: 0;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-        /* 대화 메시지 영역만 스크롤, 헤더/사이드바/입력창은 고정 */
-        .chat-area {
-            flex: 1;
-            min-height: 0;
-            padding: 24px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-        .message-card {
-            background: white;
-            border-radius: 12px;
-            padding: 20px 24px;
-            border: 1px solid #e8eaed;
-            animation: fadeIn 0.3s ease;
-        }
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>AI Chat - Spring AI</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
             }
-            to {
-                opacity: 1;
-                transform: translateY(0);
+            /* 뷰포트 고정으로 body 스크롤 방지, 헤더/사이드바 고정 후 채팅 영역만 스크롤 */
+            body {
+                font-family: 'Google Sans', 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+                background: #f8f9fa;
+                height: 100vh;
+                min-height: 100vh;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
             }
-        }
-        .message-header {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 12px;
-            color: #5f6368;
-            font-size: 0.85em;
-            font-weight: 500;
-        }
-        .message-icon {
-            font-size: 1.2em;
-        }
-        .message-content {
-            color: #202124;
-            font-size: 0.95em;
-            line-height: 1.6;
-            word-wrap: break-word;
-        }
-        /* 마크다운 렌더링 스타일: 제목·리스트·코드·인용구·테이블 */
-        .message-content h1, .message-content h2, .message-content h3 { margin: 1em 0 0.5em; font-weight: 600; }
-        .message-content h1 { font-size: 1.35em; }
-        .message-content h2 { font-size: 1.2em; }
-        .message-content h3 { font-size: 1.05em; }
-        .message-content p { margin: 0.5em 0; }
-        .message-content ul, .message-content ol { margin: 0.5em 0; padding-left: 1.5em; }
-        .message-content li { margin: 0.25em 0; }
-        .message-content pre { margin: 0.75em 0; padding: 12px; background: #f1f3f4; border-radius: 8px; overflow-x: auto; }
-        .message-content code { background: #f1f3f4; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
-        .message-content pre code { background: none; padding: 0; }
-        .message-content blockquote { margin: 0.5em 0; padding-left: 1em; border-left: 4px solid #dadce0; color: #5f6368; }
-        .message-content table { border-collapse: collapse; margin: 0.75em 0; width: 100%; }
-        .message-content th, .message-content td { border: 1px solid #e8eaed; padding: 8px 12px; text-align: left; }
-        .message-content th { background: #f8f9fa; font-weight: 600; }
-        .message-content a { color: #1967d2; text-decoration: none; }
-        .message-content a:hover { text-decoration: underline; }
-        .user-message {
-            border-left: 3px solid #1967d2;
-        }
-        .ai-message {
-            border-left: 3px solid #34a853;
-        }
-        .error-message {
-            border-left: 3px solid #ea4335;
-        }
-        .error-message .message-content {
-            color: #d93025;
-        }
-        .loading-message {
-            border-left: 3px solid #fbbc04;
-        }
-        .loading-dots {
-            display: inline-flex;
-            gap: 4px;
-            margin-left: 4px;
-        }
-        .loading-dots span {
-            width: 6px;
-            height: 6px;
-            background: #5f6368;
-            border-radius: 50%;
-            animation: bounce 1.4s infinite ease-in-out both;
-        }
-        .loading-dots span:nth-child(1) {
-            animation-delay: -0.32s;
-        }
-        .loading-dots span:nth-child(2) {
-            animation-delay: -0.16s;
-        }
-        @keyframes bounce {
-            0%, 80%, 100% {
-                transform: scale(0);
+            .header {
+                flex-shrink: 0;
+                min-height: 56px;
+                background: #e8eaed;
+                border-bottom: 1px solid #bdc1c6;
+                padding: 16px 24px;
+                display: flex;
+                align-items: center;
+                gap: 16px;
             }
-            40% {
-                transform: scale(1);
+            .header-title {
+                color: #202124;
+                font-size: 1.4em;
+                font-weight: 400;
             }
-        }
-        .placeholder {
-            text-align: center;
-            padding: 80px 20px;
-            color: #5f6368;
-            margin: auto;
-        }
-        .placeholder-icon {
-            font-size: 4em;
-            margin-bottom: 16px;
-            opacity: 0.5;
-        }
-        .placeholder-text {
-            font-size: 1.1em;
-        }
-        .input-area {
-            flex-shrink: 0;
-            background: white;
-            border-top: 1px solid #e8eaed;
-            padding: 16px 24px;
-        }
-        form {
-            display: flex;
-            gap: 12px;
-            align-items: flex-end;
-        }
-        textarea {
-            flex: 1;
-            padding: 12px 16px;
-            border: 1px solid #dadce0;
-            border-radius: 8px;
-            font-size: 0.95em;
-            font-family: inherit;
-            resize: vertical;
-            min-height: 52px;
-            max-height: 200px;
-            transition: border-color 0.2s;
-        }
-        textarea:focus {
-            outline: none;
-            border-color: #1967d2;
-        }
-        textarea:disabled {
-            background: #f8f9fa;
-            cursor: not-allowed;
-        }
-        .btn {
-            padding: 14px 28px;
-            background: #1967d2;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 0.95em;
-            cursor: pointer;
-            transition: background 0.2s;
-            white-space: nowrap;
-        }
-        .btn:hover:not(:disabled) {
-            background: #1557b0;
-        }
-        .btn:active:not(:disabled) {
-            background: #174ea6;
-        }
-        .btn:disabled {
-            background: #dadce0;
-            cursor: not-allowed;
-        }
-        .empty-history {
-            text-align: center;
-            padding: 40px 20px;
-            color: #5f6368;
-            font-size: 0.9em;
-        }
-        @media (max-width: 768px) {
+            .main-layout {
+                flex: 1;
+                min-height: 0;
+                display: flex;
+                overflow: hidden;
+            }
             .sidebar {
-                position: fixed;
-                left: -280px;
-                top: 0;
-                bottom: 0;
-                z-index: 1000;
-                transition: left 0.3s;
+                flex-shrink: 0;
+                width: 280px;
+                background: #e8eaed;
+                border-right: 1px solid #bdc1c6;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
             }
-            .sidebar.open {
-                left: 0;
+            .sidebar-header {
+                padding: 16px;
+                border-bottom: 1px solid #bdc1c6;
             }
-        }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <div class="header-title">AI Chat</div>
-    </div>
-
-    <div class="main-layout">
-        <!-- 사이드바 -->
-        <div class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <button class="new-chat-btn" id="newChatBtn">
-                    <span>➕</span>
-                    <span>새 대화</span>
-                </button>
-                <div style="height: 10px;"></div>
-                <a href="/rag/documents" class="new-chat-btn" style="background:#34a853;text-decoration:none;">
-                    <span>📚</span>
-                    <span>문서 관리</span>
-                </a>
-            </div>
-            <div class="history-list" id="historyList">
-                <div class="empty-history">히스토리를 불러오는 중...</div>
-            </div>
+            .new-chat-btn {
+                width: 100%;
+                padding: 8px 14px;
+                background: #1967d2;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                font-size: 0.875em;
+                font-weight: 500;
+                cursor: pointer;
+                transition: background 0.2s;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 6px;
+            }
+            .new-chat-btn:hover {
+                background: #1557b0;
+            }
+            .history-list {
+                flex: 1;
+                overflow-y: auto;
+                padding: 8px;
+            }
+            .history-item {
+                padding: 12px;
+                border-radius: 8px;
+                cursor: pointer;
+                transition: background 0.2s;
+                margin-bottom: 4px;
+            }
+            .history-item:hover {
+                background: #f1f3f4;
+            }
+            .history-item.active {
+                background: #e8f0fe;
+            }
+            .history-title {
+                font-size: 0.9em;
+                color: #202124;
+                margin-bottom: 4px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .history-meta {
+                font-size: 0.75em;
+                color: #5f6368;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .chat-container {
+                flex: 1;
+                min-height: 0;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+            }
+            /* 대화 메시지 영역만 스크롤, 헤더/사이드바/입력창은 고정 */
+            .chat-area {
+                flex: 1;
+                min-height: 0;
+                padding: 24px;
+                overflow-y: auto;
+                display: flex;
+                flex-direction: column;
+                gap: 16px;
+            }
+            .message-card {
+                background: white;
+                border-radius: 12px;
+                padding: 20px 24px;
+                border: 1px solid #e8eaed;
+                animation: fadeIn 0.3s ease;
+            }
+            @keyframes fadeIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(10px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+            .message-header {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-bottom: 12px;
+                color: #5f6368;
+                font-size: 0.85em;
+                font-weight: 500;
+            }
+            .message-icon {
+                font-size: 1.2em;
+            }
+            .message-content {
+                color: #202124;
+                font-size: 0.95em;
+                line-height: 1.6;
+                word-wrap: break-word;
+            }
+            /* 마크다운 렌더링 스타일: 제목·리스트·코드·인용구·테이블 */
+            .message-content h1,
+            .message-content h2,
+            .message-content h3 {
+                margin: 1em 0 0.5em;
+                font-weight: 600;
+            }
+            .message-content h1 {
+                font-size: 1.35em;
+            }
+            .message-content h2 {
+                font-size: 1.2em;
+            }
+            .message-content h3 {
+                font-size: 1.05em;
+            }
+            .message-content p {
+                margin: 0.5em 0;
+            }
+            .message-content ul,
+            .message-content ol {
+                margin: 0.5em 0;
+                padding-left: 1.5em;
+            }
+            .message-content li {
+                margin: 0.25em 0;
+            }
+            .message-content pre {
+                margin: 0.75em 0;
+                padding: 12px;
+                background: #f1f3f4;
+                border-radius: 8px;
+                overflow-x: auto;
+            }
+            .message-content code {
+                background: #f1f3f4;
+                padding: 2px 6px;
+                border-radius: 4px;
+                font-size: 0.9em;
+            }
+            .message-content pre code {
+                background: none;
+                padding: 0;
+            }
+            .message-content blockquote {
+                margin: 0.5em 0;
+                padding-left: 1em;
+                border-left: 4px solid #dadce0;
+                color: #5f6368;
+            }
+            .message-content table {
+                border-collapse: collapse;
+                margin: 0.75em 0;
+                width: 100%;
+            }
+            .message-content th,
+            .message-content td {
+                border: 1px solid #e8eaed;
+                padding: 8px 12px;
+                text-align: left;
+            }
+            .message-content th {
+                background: #f8f9fa;
+                font-weight: 600;
+            }
+            .message-content a {
+                color: #1967d2;
+                text-decoration: none;
+            }
+            .message-content a:hover {
+                text-decoration: underline;
+            }
+            .user-message {
+                border-left: 3px solid #1967d2;
+            }
+            .ai-message {
+                border-left: 3px solid #34a853;
+            }
+            .error-message {
+                border-left: 3px solid #ea4335;
+            }
+            .error-message .message-content {
+                color: #d93025;
+            }
+            .loading-message {
+                border-left: 3px solid #fbbc04;
+            }
+            .loading-dots {
+                display: inline-flex;
+                gap: 4px;
+                margin-left: 4px;
+            }
+            .loading-dots span {
+                width: 6px;
+                height: 6px;
+                background: #5f6368;
+                border-radius: 50%;
+                animation: bounce 1.4s infinite ease-in-out both;
+            }
+            .loading-dots span:nth-child(1) {
+                animation-delay: -0.32s;
+            }
+            .loading-dots span:nth-child(2) {
+                animation-delay: -0.16s;
+            }
+            @keyframes bounce {
+                0%,
+                80%,
+                100% {
+                    transform: scale(0);
+                }
+                40% {
+                    transform: scale(1);
+                }
+            }
+            .placeholder {
+                text-align: center;
+                padding: 80px 20px;
+                color: #5f6368;
+                margin: auto;
+            }
+            .placeholder-icon {
+                font-size: 4em;
+                margin-bottom: 16px;
+                opacity: 0.5;
+            }
+            .placeholder-text {
+                font-size: 1.1em;
+            }
+            .input-area {
+                flex-shrink: 0;
+                background: white;
+                border-top: 1px solid #e8eaed;
+                padding: 16px 24px;
+            }
+            form {
+                display: flex;
+                gap: 12px;
+                align-items: flex-end;
+            }
+            textarea {
+                flex: 1;
+                padding: 12px 16px;
+                border: 1px solid #dadce0;
+                border-radius: 8px;
+                font-size: 0.95em;
+                font-family: inherit;
+                resize: vertical;
+                min-height: 52px;
+                max-height: 200px;
+                transition: border-color 0.2s;
+            }
+            textarea:focus {
+                outline: none;
+                border-color: #1967d2;
+            }
+            textarea:disabled {
+                background: #f8f9fa;
+                cursor: not-allowed;
+            }
+            .btn {
+                height: 52px;
+                padding: 0 20px;
+                background: #1967d2;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                font-size: 0.875em;
+                font-weight: 500;
+                cursor: pointer;
+                transition: background 0.2s;
+                white-space: nowrap;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .btn:hover:not(:disabled) {
+                background: #1557b0;
+            }
+            .btn:active:not(:disabled) {
+                background: #174ea6;
+            }
+            .btn:disabled {
+                background: #dadce0;
+                cursor: not-allowed;
+            }
+            .empty-history {
+                text-align: center;
+                padding: 40px 20px;
+                color: #5f6368;
+                font-size: 0.9em;
+            }
+            @media (max-width: 768px) {
+                .sidebar {
+                    position: fixed;
+                    left: -280px;
+                    top: 0;
+                    bottom: 0;
+                    z-index: 1000;
+                    transition: left 0.3s;
+                }
+                .sidebar.open {
+                    left: 0;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <div class="header-title">AI Chat</div>
         </div>
 
-        <!-- 메인 채팅 영역 -->
-        <div class="chat-container">
-            <div class="chat-area" id="chatArea">
-                <div class="placeholder" id="placeholder">
-                    <div class="placeholder-icon">💬</div>
-                    <div class="placeholder-text">
-                        왼쪽에서 대화를 선택하거나 새 대화를 시작하세요
-                    </div>
+        <div class="main-layout">
+            <!-- 사이드바 -->
+            <div class="sidebar" id="sidebar">
+                <div class="sidebar-header">
+                    <button class="new-chat-btn" id="newChatBtn">
+                        <span>➕</span>
+                        <span>새 대화</span>
+                    </button>
+                    <div style="height: 10px"></div>
+                    <a
+                        href="/rag/documents"
+                        class="new-chat-btn"
+                        style="background: #34a853; text-decoration: none">
+                        <span>📚</span>
+                        <span>문서 관리</span>
+                    </a>
+                </div>
+                <div class="history-list" id="historyList">
+                    <div class="empty-history">히스토리를 불러오는 중...</div>
                 </div>
             </div>
 
-            <div class="input-area">
-                <form id="chatForm">
-                    <textarea 
-                        id="messageInput"
-                        name="message" 
-                        placeholder="메시지를 입력하세요..."
-                        required
-                        rows="1"></textarea>
-                    <button type="submit" class="btn" id="sendButton">전송</button>
-                </form>
+            <!-- 메인 채팅 영역 -->
+            <div class="chat-container">
+                <div class="chat-area" id="chatArea">
+                    <div class="placeholder" id="placeholder">
+                        <div class="placeholder-icon">💬</div>
+                        <div class="placeholder-text">
+                            왼쪽에서 대화를 선택하거나 새 대화를 시작하세요
+                        </div>
+                    </div>
+                </div>
+
+                <div class="input-area">
+                    <form id="chatForm">
+                        <textarea
+                            id="messageInput"
+                            name="message"
+                            placeholder="메시지를 입력하세요..."
+                            required
+                            rows="1"></textarea>
+                        <button type="submit" class="btn" id="sendButton">전송</button>
+                    </form>
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- 마크다운 렌더링: marked(파싱) + DOMPurify(XSS 방지) -->
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
-    <script>
-        const chatArea = document.getElementById('chatArea');
-        const chatForm = document.getElementById('chatForm');
-        const messageInput = document.getElementById('messageInput');
-        const sendButton = document.getElementById('sendButton');
-        const placeholder = document.getElementById('placeholder');
-        const historyList = document.getElementById('historyList');
-        const newChatBtn = document.getElementById('newChatBtn');
+        <!-- 마크다운 렌더링: marked(파싱) + DOMPurify(XSS 방지) -->
+        <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+        <script>
+            const chatArea = document.getElementById('chatArea');
+            const chatForm = document.getElementById('chatForm');
+            const messageInput = document.getElementById('messageInput');
+            const sendButton = document.getElementById('sendButton');
+            const placeholder = document.getElementById('placeholder');
+            const historyList = document.getElementById('historyList');
+            const newChatBtn = document.getElementById('newChatBtn');
 
-        // Conversation ID 관리
-        let conversationId = localStorage.getItem('conversationId');
-        if (!conversationId) {
-            conversationId = crypto.randomUUID();
-            localStorage.setItem('conversationId', conversationId);
-        }
+            // Conversation ID 관리
+            let conversationId = localStorage.getItem('conversationId');
+            if (!conversationId) {
+                conversationId = crypto.randomUUID();
+                localStorage.setItem('conversationId', conversationId);
+            }
 
-        // 히스토리 목록 로드
-        async function loadHistories() {
-            try {
-                const response = await fetch('/api/chat/histories');
-                const histories = await response.json();
-                
-                if (histories.length === 0) {
-                    historyList.innerHTML = '<div class="empty-history">대화 히스토리가 없습니다</div>';
-                    return;
-                }
+            // 히스토리 목록 로드
+            async function loadHistories() {
+                try {
+                    const response = await fetch('/api/chat/histories');
+                    const histories = await response.json();
 
-                historyList.innerHTML = '';
-                histories.forEach(history => {
-                    const item = document.createElement('div');
-                    item.className = 'history-item';
-                    if (history.conversationId === conversationId) {
-                        item.classList.add('active');
+                    if (histories.length === 0) {
+                        historyList.innerHTML =
+                            '<div class="empty-history">대화 히스토리가 없습니다</div>';
+                        return;
                     }
-                    
-                    const title = document.createElement('div');
-                    title.className = 'history-title';
-                    title.textContent = history.title;
-                    
-                    const meta = document.createElement('div');
-                    meta.className = 'history-meta';
-                    const date = new Date(history.lastUpdated);
-                    meta.innerHTML = `
+
+                    historyList.innerHTML = '';
+                    histories.forEach((history) => {
+                        const item = document.createElement('div');
+                        item.className = 'history-item';
+                        if (history.conversationId === conversationId) {
+                            item.classList.add('active');
+                        }
+
+                        const title = document.createElement('div');
+                        title.className = 'history-title';
+                        title.textContent = history.title;
+
+                        const meta = document.createElement('div');
+                        meta.className = 'history-meta';
+                        const date = new Date(history.lastUpdated);
+                        meta.innerHTML = `
                         <span>${formatDate(date)}</span>
                         <span>${history.messageCount}개</span>
                     `;
-                    
-                    item.appendChild(title);
-                    item.appendChild(meta);
-                    
-                    item.addEventListener('click', (e) => {
-                        selectHistory(history.conversationId, e.currentTarget);
+
+                        item.appendChild(title);
+                        item.appendChild(meta);
+
+                        item.addEventListener('click', (e) => {
+                            selectHistory(history.conversationId, e.currentTarget);
+                        });
+
+                        historyList.appendChild(item);
                     });
-                    
-                    historyList.appendChild(item);
+                } catch (error) {
+                    console.error('히스토리 로드 실패:', error);
+                    historyList.innerHTML = '<div class="empty-history">히스토리 로드 실패</div>';
+                }
+            }
+
+            // 날짜 포맷팅
+            function formatDate(date) {
+                const now = new Date();
+                const diff = now - date;
+                const minutes = Math.floor(diff / 60000);
+                const hours = Math.floor(diff / 3600000);
+                const days = Math.floor(diff / 86400000);
+
+                if (minutes < 1) return '방금 전';
+                if (minutes < 60) return `${minutes}분 전`;
+                if (hours < 24) return `${hours}시간 전`;
+                if (days < 7) return `${days}일 전`;
+                return date.toLocaleDateString('ko-KR');
+            }
+
+            // 히스토리 선택
+            async function selectHistory(id, clickedElement) {
+                conversationId = id;
+                localStorage.setItem('conversationId', conversationId);
+
+                // 활성 상태 업데이트
+                document.querySelectorAll('.history-item').forEach((item) => {
+                    item.classList.remove('active');
                 });
-            } catch (error) {
-                console.error('히스토리 로드 실패:', error);
-                historyList.innerHTML = '<div class="empty-history">히스토리 로드 실패</div>';
+                if (clickedElement) {
+                    clickedElement.classList.add('active');
+                }
+
+                // 대화 내용 로드
+                await loadHistoryMessages(id);
+
+                // 히스토리 목록 새로고침
+                await loadHistories();
             }
-        }
 
-        // 날짜 포맷팅
-        function formatDate(date) {
-            const now = new Date();
-            const diff = now - date;
-            const minutes = Math.floor(diff / 60000);
-            const hours = Math.floor(diff / 3600000);
-            const days = Math.floor(diff / 86400000);
+            // 특정 히스토리의 메시지 로드
+            async function loadHistoryMessages(id) {
+                try {
+                    const response = await fetch(`/api/chat/histories/${id}`);
+                    const historyDetail = await response.json();
 
-            if (minutes < 1) return '방금 전';
-            if (minutes < 60) return `${minutes}분 전`;
-            if (hours < 24) return `${hours}시간 전`;
-            if (days < 7) return `${days}일 전`;
-            return date.toLocaleDateString('ko-KR');
-        }
+                    // 채팅 영역 초기화
+                    chatArea.innerHTML = '';
+                    if (placeholder) placeholder.remove();
 
-        // 히스토리 선택
-        async function selectHistory(id, clickedElement) {
-            conversationId = id;
-            localStorage.setItem('conversationId', conversationId);
-            
-            // 활성 상태 업데이트
-            document.querySelectorAll('.history-item').forEach(item => {
-                item.classList.remove('active');
-            });
-            if (clickedElement) {
-                clickedElement.classList.add('active');
+                    // 메시지 표시
+                    historyDetail.messages.forEach((msg) => {
+                        const type = msg.role === 'user' ? 'user' : 'ai';
+                        addMessage(msg.content, type, false);
+                    });
+
+                    // 스크롤 하단으로
+                    chatArea.scrollTop = chatArea.scrollHeight;
+                } catch (error) {
+                    console.error('메시지 로드 실패:', error);
+                    addMessage('대화 내용을 불러오는 중 오류가 발생했습니다.', 'error');
+                }
             }
-            
-            // 대화 내용 로드
-            await loadHistoryMessages(id);
-            
-            // 히스토리 목록 새로고침
-            await loadHistories();
-        }
 
-        // 특정 히스토리의 메시지 로드
-        async function loadHistoryMessages(id) {
-            try {
-                const response = await fetch(`/api/chat/histories/${id}`);
-                const historyDetail = await response.json();
-                
+            // 새 대화 시작
+            newChatBtn.addEventListener('click', () => {
+                conversationId = crypto.randomUUID();
+                localStorage.setItem('conversationId', conversationId);
+
                 // 채팅 영역 초기화
                 chatArea.innerHTML = '';
-                if (placeholder) placeholder.remove();
-                
-                // 메시지 표시
-                historyDetail.messages.forEach(msg => {
-                    const type = msg.role === 'user' ? 'user' : 'ai';
-                    addMessage(msg.content, type, false);
-                });
-                
-                // 스크롤 하단으로
-                chatArea.scrollTop = chatArea.scrollHeight;
-            } catch (error) {
-                console.error('메시지 로드 실패:', error);
-                addMessage('대화 내용을 불러오는 중 오류가 발생했습니다.', 'error');
-            }
-        }
-
-        // 새 대화 시작
-        newChatBtn.addEventListener('click', () => {
-            conversationId = crypto.randomUUID();
-            localStorage.setItem('conversationId', conversationId);
-            
-            // 채팅 영역 초기화
-            chatArea.innerHTML = '';
-            const newPlaceholder = document.createElement('div');
-            newPlaceholder.className = 'placeholder';
-            newPlaceholder.id = 'placeholder';
-            newPlaceholder.innerHTML = `
+                const newPlaceholder = document.createElement('div');
+                newPlaceholder.className = 'placeholder';
+                newPlaceholder.id = 'placeholder';
+                newPlaceholder.innerHTML = `
                 <div class="placeholder-icon">💬</div>
                 <div class="placeholder-text">새 대화를 시작하세요</div>
             `;
-            chatArea.appendChild(newPlaceholder);
-            
-            // 히스토리 목록 새로고침
-            loadHistories();
-        });
+                chatArea.appendChild(newPlaceholder);
 
-        // 자동 높이 조절
-        messageInput.addEventListener('input', function() {
-            this.style.height = 'auto';
-            this.style.height = Math.min(this.scrollHeight, 200) + 'px';
-        });
+                // 히스토리 목록 새로고침
+                loadHistories();
+            });
 
-        // 메시지 추가 함수
-        function addMessage(content, type, scroll = true) {
-            // placeholder 제거
-            const existingPlaceholder = document.getElementById('placeholder');
-            if (existingPlaceholder) {
-                existingPlaceholder.remove();
-            }
+            // 자동 높이 조절
+            messageInput.addEventListener('input', function () {
+                this.style.height = 'auto';
+                this.style.height = Math.min(this.scrollHeight, 200) + 'px';
+            });
 
-            const messageCard = document.createElement('div');
-            messageCard.className = `message-card ${type}-message`;
-
-            const header = document.createElement('div');
-            header.className = 'message-header';
-
-            const icon = document.createElement('span');
-            icon.className = 'message-icon';
-            
-            const label = document.createElement('span');
-
-            if (type === 'user') {
-                icon.textContent = '👤';
-                label.textContent = 'You';
-            } else if (type === 'ai') {
-                icon.textContent = '✨';
-                label.textContent = 'AI';
-            } else if (type === 'error') {
-                icon.textContent = '⚠️';
-                label.textContent = 'Error';
-            } else if (type === 'loading') {
-                icon.textContent = '⏳';
-                label.textContent = 'AI';
-            }
-
-            header.appendChild(icon);
-            header.appendChild(label);
-
-            const messageContent = document.createElement('div');
-            messageContent.className = 'message-content';
-
-            if (type === 'loading') {
-                messageContent.innerHTML = 'Thinking<span class="loading-dots"><span></span><span></span><span></span></span>';
-            } else if (type === 'error') {
-                messageContent.textContent = content;
-            } else {
-                // user·ai 메시지: 마크다운 → HTML 변환 후 DOMPurify로 sanitize
-                const rawHtml = typeof marked !== 'undefined' ? marked.parse(content || '') : (content || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                messageContent.innerHTML = typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(rawHtml) : rawHtml;
-            }
-
-            messageCard.appendChild(header);
-            messageCard.appendChild(messageContent);
-            chatArea.appendChild(messageCard);
-
-            // 스크롤 하단으로
-            if (scroll) {
-                chatArea.scrollTop = chatArea.scrollHeight;
-            }
-
-            return messageCard;
-        }
-
-        // 폼 제출 처리
-        chatForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-
-            const message = messageInput.value.trim();
-            if (!message) return;
-
-            // 사용자 메시지 추가
-            addMessage(message, 'user');
-
-            // 입력창 초기화 및 비활성화
-            messageInput.value = '';
-            messageInput.style.height = 'auto';
-            messageInput.disabled = true;
-            sendButton.disabled = true;
-
-            // 로딩 메시지 추가
-            const loadingCard = addMessage('', 'loading');
-
-            try {
-                // 서버로 메시지 전송 (conversationId 포함)
-                const response = await fetch('/api/chat/message', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ 
-                        message: message,
-                        conversationId: conversationId
-                    })
-                });
-
-                const data = await response.json();
-
-                // 로딩 메시지 제거
-                loadingCard.remove();
-
-                if (data.success === 'true') {
-                    // AI 응답 추가
-                    addMessage(data.response, 'ai');
-                    // 히스토리 목록 새로고침
-                    loadHistories();
-                } else {
-                    // 에러 메시지 추가
-                    addMessage('AI 응답 중 오류가 발생했습니다: ' + data.error, 'error');
+            // 메시지 추가 함수
+            function addMessage(content, type, scroll = true) {
+                // placeholder 제거
+                const existingPlaceholder = document.getElementById('placeholder');
+                if (existingPlaceholder) {
+                    existingPlaceholder.remove();
                 }
-            } catch (error) {
-                // 로딩 메시지 제거
-                loadingCard.remove();
-                // 에러 메시지 추가
-                addMessage('네트워크 오류가 발생했습니다: ' + error.message, 'error');
-            } finally {
-                // 입력창 활성화
-                messageInput.disabled = false;
-                sendButton.disabled = false;
-                messageInput.focus();
-            }
-        });
 
-        // Enter 키로 전송 (Shift+Enter는 줄바꿈)
-        messageInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
+                const messageCard = document.createElement('div');
+                messageCard.className = `message-card ${type}-message`;
+
+                const header = document.createElement('div');
+                header.className = 'message-header';
+
+                const icon = document.createElement('span');
+                icon.className = 'message-icon';
+
+                const label = document.createElement('span');
+
+                if (type === 'user') {
+                    icon.textContent = '👤';
+                    label.textContent = 'You';
+                } else if (type === 'ai') {
+                    icon.textContent = '✨';
+                    label.textContent = 'AI';
+                } else if (type === 'error') {
+                    icon.textContent = '⚠️';
+                    label.textContent = 'Error';
+                } else if (type === 'loading') {
+                    icon.textContent = '⏳';
+                    label.textContent = 'AI';
+                }
+
+                header.appendChild(icon);
+                header.appendChild(label);
+
+                const messageContent = document.createElement('div');
+                messageContent.className = 'message-content';
+
+                if (type === 'loading') {
+                    messageContent.innerHTML =
+                        'Thinking<span class="loading-dots"><span></span><span></span><span></span></span>';
+                } else if (type === 'error') {
+                    messageContent.textContent = content;
+                } else {
+                    // user·ai 메시지: 마크다운 → HTML 변환 후 DOMPurify로 sanitize
+                    const rawHtml =
+                        typeof marked !== 'undefined'
+                            ? marked.parse(content || '')
+                            : (content || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                    messageContent.innerHTML =
+                        typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(rawHtml) : rawHtml;
+                }
+
+                messageCard.appendChild(header);
+                messageCard.appendChild(messageContent);
+                chatArea.appendChild(messageCard);
+
+                // 스크롤 하단으로
+                if (scroll) {
+                    chatArea.scrollTop = chatArea.scrollHeight;
+                }
+
+                return messageCard;
+            }
+
+            // 폼 제출 처리
+            chatForm.addEventListener('submit', async function (e) {
                 e.preventDefault();
-                chatForm.dispatchEvent(new Event('submit'));
-            }
-        });
 
-        // 페이지 로드 시 히스토리 목록 불러오기
-        loadHistories();
-        
-        // 현재 conversationId에 해당하는 히스토리가 있으면 로드
-        if (conversationId && conversationId !== 'default') {
-            loadHistoryMessages(conversationId).catch(console.error);
-        }
-    </script>
-</body>
+                const message = messageInput.value.trim();
+                if (!message) return;
+
+                // 사용자 메시지 추가
+                addMessage(message, 'user');
+
+                // 입력창 초기화 및 비활성화
+                messageInput.value = '';
+                messageInput.style.height = 'auto';
+                messageInput.disabled = true;
+                sendButton.disabled = true;
+
+                // 로딩 메시지 추가
+                const loadingCard = addMessage('', 'loading');
+
+                try {
+                    // 서버로 메시지 전송 (conversationId 포함)
+                    const response = await fetch('/api/chat/message', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            message: message,
+                            conversationId: conversationId,
+                        }),
+                    });
+
+                    const data = await response.json();
+
+                    // 로딩 메시지 제거
+                    loadingCard.remove();
+
+                    if (data.success === 'true') {
+                        // AI 응답 추가
+                        addMessage(data.response, 'ai');
+                        // 히스토리 목록 새로고침
+                        loadHistories();
+                    } else {
+                        // 에러 메시지 추가
+                        addMessage('AI 응답 중 오류가 발생했습니다: ' + data.error, 'error');
+                    }
+                } catch (error) {
+                    // 로딩 메시지 제거
+                    loadingCard.remove();
+                    // 에러 메시지 추가
+                    addMessage('네트워크 오류가 발생했습니다: ' + error.message, 'error');
+                } finally {
+                    // 입력창 활성화
+                    messageInput.disabled = false;
+                    sendButton.disabled = false;
+                    messageInput.focus();
+                }
+            });
+
+            // Enter 키로 전송 (Shift+Enter는 줄바꿈)
+            messageInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    chatForm.dispatchEvent(new Event('submit'));
+                }
+            });
+
+            // 페이지 로드 시 히스토리 목록 불러오기
+            loadHistories();
+
+            // 현재 conversationId에 해당하는 히스토리가 있으면 로드
+            if (conversationId && conversationId !== 'default') {
+                loadHistoryMessages(conversationId).catch(console.error);
+            }
+        </script>
+    </body>
 </html>

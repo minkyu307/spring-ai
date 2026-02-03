@@ -15,28 +15,86 @@
                 background: #f8f9fa;
                 min-height: 100vh;
                 color: #202124;
+                padding-top: 56px;
             }
             .header {
-                background: white;
-                border-bottom: 1px solid #e8eaed;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                z-index: 100;
+                min-height: 56px;
+                background: #e8eaed;
+                border-bottom: 1px solid #bdc1c6;
                 padding: 16px 24px;
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
             }
             .header-title {
-                font-size: 1.2em;
+                color: #202124;
+                font-size: 1.4em;
+                font-weight: 400;
+            }
+            /* 구분선 전체 너비 + 버튼 구역 패딩은 chat.html sidebar-header와 동일(16px) */
+            .sidebar-header {
+                padding: 16px;
+                border-bottom: 1px solid #bdc1c6;
+                margin-bottom: 8px;
+                margin-left: -16px;
+                margin-right: -16px;
+                padding-left: 16px;
+                padding-right: 16px;
+            }
+            .sidebar-nav-btn {
+                width: 100%;
+                padding: 8px 14px;
+                background: #34a853;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                font-size: 0.875em;
                 font-weight: 500;
-            }
-            .header-actions a {
-                color: #1967d2;
+                cursor: pointer;
+                transition: background 0.2s;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 6px;
                 text-decoration: none;
-                font-size: 0.95em;
+                box-sizing: border-box;
             }
-            .container {
-                max-width: 1080px;
-                margin: 0 auto;
+            .sidebar-nav-btn:hover {
+                background: #2d8e47;
+            }
+            .main-layout {
+                display: flex;
+                min-height: calc(100vh - 56px);
+            }
+            .sidebar {
+                position: fixed;
+                left: 0;
+                top: 56px;
+                bottom: 0;
+                width: 280px;
+                background: #e8eaed;
+                border-right: 1px solid #bdc1c6;
+                overflow-y: auto;
+                overflow-x: hidden;
+                padding: 16px;
+                flex-shrink: 0;
+            }
+            .sidebar .card {
+                margin-bottom: 16px;
+            }
+            .sidebar .card:last-child {
+                margin-bottom: 0;
+            }
+            .main-content {
+                margin-left: 280px;
+                flex: 1;
                 padding: 24px;
+                min-width: 0;
             }
             .card {
                 background: white;
@@ -50,6 +108,16 @@
                 font-weight: 600;
                 margin-bottom: 12px;
             }
+            .sidebar .card-desc {
+                margin-top: 12px;
+                padding: 10px 12px;
+                font-size: 0.85em;
+                color: #3c4043;
+                background: #f1f3f4;
+                border-radius: 8px;
+                border-left: 3px solid #1967d2;
+                line-height: 1.5;
+            }
             .row {
                 display: flex;
                 gap: 12px;
@@ -57,23 +125,34 @@
                 flex-wrap: wrap;
             }
             .btn {
-                padding: 10px 14px;
+                padding: 6px 14px;
                 border: none;
-                border-radius: 8px;
+                border-radius: 6px;
                 cursor: pointer;
-                font-size: 0.95em;
+                font-size: 0.875em;
+                font-weight: 500;
+                transition: background 0.2s, opacity 0.2s;
             }
             .btn-primary {
                 background: #1967d2;
                 color: white;
             }
+            .btn-primary:hover:not(:disabled) {
+                background: #1557b0;
+            }
             .btn-secondary {
                 background: #5f6368;
                 color: white;
             }
+            .btn-secondary:hover:not(:disabled) {
+                background: #4a4d52;
+            }
             .btn-danger {
                 background: #d93025;
                 color: white;
+            }
+            .btn-danger:hover:not(:disabled) {
+                background: #b71c1c;
             }
             .btn:disabled {
                 background: #dadce0;
@@ -174,7 +253,16 @@
                 display: flex;
             }
             @media (max-width: 768px) {
-                .container {
+                .sidebar {
+                    position: relative;
+                    width: 100%;
+                    top: auto;
+                    bottom: auto;
+                    border-right: none;
+                    border-bottom: 1px solid #e8eaed;
+                }
+                .main-content {
+                    margin-left: 0;
                     padding: 16px;
                 }
                 th:nth-child(4),
@@ -187,75 +275,93 @@
     <body>
         <div class="header">
             <div class="header-title">RAG 문서 관리</div>
-            <div class="header-actions">
-                <a href="/chat">← 채팅으로</a>
-            </div>
         </div>
 
-        <div class="container">
-            <div class="card">
-                <div class="card-title">문서 업로드 (임베딩)</div>
-                <div class="row">
-                    <input
-                        id="fileInput"
-                        type="file"
-                        multiple
-                        accept=".txt,.md,.markdown,.pdf,text/plain,text/markdown,application/pdf" />
-                    <button class="btn btn-primary" id="uploadBtn">업로드</button>
+        <div class="main-layout">
+            <aside class="sidebar" aria-label="문서 적재">
+                <div class="sidebar-header">
+                    <a href="/chat" class="sidebar-nav-btn">
+                        <span>💬</span>
+                        <span>채팅으로</span>
+                    </a>
                 </div>
-                <div class="hint">
-                    현재 업로드는 <span class="badge">.txt</span>, <span class="badge">.md</span>,
-                    <span class="badge">.markdown</span>, <span class="badge">.pdf</span>를
-                    허용하며, 여러 파일을 한 번에 업로드할 수 있습니다. PDF는 페이지 단위로 분리 후,
-                    필요 시 OCR을 수행합니다.
+                <div class="card">
+                    <div class="row">
+                        <input
+                            id="fileInput"
+                            type="file"
+                            multiple
+                            accept=".txt,.md,.markdown,.pdf,.docx,.pptx,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                            style="
+                                position: absolute;
+                                width: 0;
+                                height: 0;
+                                opacity: 0;
+                                pointer-events: none;
+                            " />
+                        <button class="btn btn-primary" id="uploadBtn" type="button">
+                            파일 업로드
+                        </button>
+                    </div>
+                    <div class="card-desc">
+                        현재 업로드는 <span class="badge">.txt</span>,
+                        <span class="badge">.md</span>, <span class="badge">.markdown</span>,
+                        <span class="badge">.pdf</span>, <span class="badge">.docx</span>,
+                        <span class="badge">.pptx</span>를 허용하며, 여러 파일을 한 번에 업로드할 수
+                        있습니다. PDF는 페이지 단위로 분리 후, 필요 시 OCR을 수행합니다.
+                    </div>
+                    <div class="status" id="status"></div>
                 </div>
-                <div class="status" id="status"></div>
-            </div>
 
-            <div class="card">
-                <div class="card-title">URL 문서 적재 (임베딩)</div>
-                <div class="row">
-                    <button class="btn btn-secondary" id="openUrlDialogBtn">URL 입력</button>
+                <div class="card">
+                    <div class="row">
+                        <button class="btn btn-primary" id="openUrlDialogBtn">URL 업로드</button>
+                    </div>
+                    <div class="card-desc">
+                        단일 URL(인증/크롤링 제외)을 읽어서 적재합니다.
+                        <span class="badge">HTML</span>, <span class="badge">PDF</span>,
+                        <span class="badge">Markdown</span>, <span class="badge">TXT</span>는 자동
+                        판별됩니다.
+                    </div>
                 </div>
-                <div class="hint">
-                    단일 URL(인증/크롤링 제외)을 읽어서 적재합니다. <span class="badge">HTML</span>,
-                    <span class="badge">PDF</span>, <span class="badge">Markdown</span>,
-                    <span class="badge">TXT</span>는 자동 판별됩니다.
-                </div>
-            </div>
+            </aside>
 
-            <div class="card">
-                <div class="row" style="justify-content: space-between; gap: 12px">
-                    <div>
-                        <div class="card-title" style="margin-bottom: 6px">벡터 DB 문서 목록</div>
-                        <div class="muted">
-                            표시 기준: vector_store 테이블의 청크들을 docId로 그룹핑
+            <main class="main-content">
+                <div class="card">
+                    <div class="row" style="justify-content: space-between; gap: 12px">
+                        <div>
+                            <div class="card-title" style="margin-bottom: 6px">
+                                벡터 DB 문서 목록
+                            </div>
+                            <div class="muted">
+                                표시 기준: vector_store 테이블의 청크들을 docId로 그룹핑
+                            </div>
+                        </div>
+                        <div class="row">
+                            <button class="btn btn-secondary" id="refreshBtn">새로고침</button>
                         </div>
                     </div>
-                    <div class="row">
-                        <button class="btn btn-secondary" id="refreshBtn">새로고침</button>
+                    <div style="height: 12px"></div>
+                    <div style="overflow-x: auto">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 24%">제목</th>
+                                    <th style="width: 20%">파일명</th>
+                                    <th style="width: 10%">청크</th>
+                                    <th style="width: 28%">docId</th>
+                                    <th style="width: 18%">작업</th>
+                                </tr>
+                            </thead>
+                            <tbody id="docTbody">
+                                <tr>
+                                    <td colspan="5" class="muted">로딩 중...</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-                <div style="height: 12px"></div>
-                <div style="overflow-x: auto">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th style="width: 24%">제목</th>
-                                <th style="width: 20%">파일명</th>
-                                <th style="width: 10%">청크</th>
-                                <th style="width: 28%">docId</th>
-                                <th style="width: 18%">작업</th>
-                            </tr>
-                        </thead>
-                        <tbody id="docTbody">
-                            <tr>
-                                <td colspan="5" class="muted">로딩 중...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+            </main>
         </div>
 
         <div class="modal-backdrop" id="urlModalBackdrop" aria-hidden="true">
@@ -492,7 +598,10 @@
                 return escapeHtml(s).replace(/`/g, '&#96;');
             }
 
-            uploadBtn.addEventListener('click', upload);
+            uploadBtn.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', () => {
+                if (fileInput.files && fileInput.files.length > 0) upload();
+            });
             openUrlDialogBtn.addEventListener('click', openUrlModal);
             cancelUrlBtn.addEventListener('click', closeUrlModal);
             ingestUrlBtn.addEventListener('click', ingestUrl);

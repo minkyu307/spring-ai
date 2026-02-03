@@ -59,11 +59,12 @@ public class DocumentIngestionService {
 			return new IngestionResult(docId, null, 0, 0);
 		}
 
+		// 한 번의 적재(한 파일)당 하나의 title만 사용. Reader가 섹션별로 넣은 title은 덮어써서 docId당 단일 행으로 표시되게 함.
 		String title = findOrGenerateTitle(enriched, base);
 		enriched = enriched.stream()
 				.map(d -> {
 					Map<String, Object> merged = new HashMap<>(d.getMetadata());
-					merged.putIfAbsent("title", title);
+					merged.put("title", title);
 					return new Document(d.getText(), merged);
 				})
 				.toList();
@@ -151,12 +152,8 @@ public class DocumentIngestionService {
 		return t;
 	}
 
+	/** Reader가 넣은 섹션 제목(예: [1. 개요]) 대신, 첫 청크로 생성하거나 파일명을 fallback으로 사용. */
 	private String findOrGenerateTitle(List<Document> documents, Map<String, Object> baseMetadata) {
-		String existing = documents.get(0).getMetadata() != null ? (String) documents.get(0).getMetadata().get("title") : null;
-		if (existing != null && !existing.isBlank()) {
-			return firstNCodePoints(existing, 20);
-		}
-
 		String filename = baseMetadata != null ? (String) baseMetadata.get("filename") : null;
 		String sample = documents.get(0).getText();
 		return generateTitle(sample, filename);

@@ -10,12 +10,19 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 멀티 파일 업로드 → VectorStore 적재 결과를 담당하는 서비스.
  */
 @Service
 public class RagFileUploadService {
+
+	/** 업로드·적재 허용 확장자(소문자, 점 포함). // RagResourceDocumentReaderService 지원 형식과 맞출 것 */
+	private static final Set<String> ALLOWED_EXTENSIONS = Set.of(
+			".txt", ".md", ".markdown", ".pdf",
+			".docx", ".pptx"
+	);
 
 	private final DocumentIngestionService ingestionService;
 	private final RagResourceDocumentReaderService readerService;
@@ -51,7 +58,7 @@ public class RagFileUploadService {
 			String filename = file.getOriginalFilename() == null ? "unknown" : file.getOriginalFilename();
 			String lower = filename.toLowerCase();
 
-			if (!(lower.endsWith(".txt") || lower.endsWith(".md") || lower.endsWith(".markdown") || lower.endsWith(".pdf"))) {
+			if (!isSupportedExtension(lower)) {
 				failed++;
 				results.add(new RagFileIngestResultDto(filename, "FAILED", 0, "지원하지 않는 파일 형식"));
 				continue;
@@ -104,5 +111,10 @@ public class RagFileUploadService {
 				totalChunks,
 				results
 		);
+	}
+
+	/** 파일명(소문자)이 허용 확장자로 끝나는지 검사한다. */
+	private static boolean isSupportedExtension(String filenameLower) {
+		return ALLOWED_EXTENSIONS.stream().anyMatch(filenameLower::endsWith);
 	}
 }

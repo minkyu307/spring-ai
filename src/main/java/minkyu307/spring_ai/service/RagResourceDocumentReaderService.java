@@ -4,6 +4,8 @@ import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.PDFRenderer;
 import org.apache.pdfbox.text.PDFTextStripper;
+import org.apache.poi.extractor.ExtractorFactory;
+import org.apache.poi.extractor.POITextExtractor;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.reader.TextReader;
@@ -33,6 +35,7 @@ import java.util.Map;
  * - Markdown: MarkdownDocumentReader
  * - Text: TextReader
  * - PDF: 페이지 단위 텍스트 추출 + (텍스트 부족 시) 이미지 기반 OCR(멀티모달 LLM) fallback
+ * - DOCX/PPTX: Apache POI(poi-ooxml)로 텍스트 추출
  */
 @Service
 public class RagResourceDocumentReaderService {
@@ -50,7 +53,7 @@ public class RagResourceDocumentReaderService {
 	}
 
 	public enum DetectedType {
-		HTML, PDF, MARKDOWN, TEXT
+		HTML, PDF, MARKDOWN, TEXT, DOCX, PPTX
 	}
 
 	public record ReadResult(
@@ -69,6 +72,8 @@ public class RagResourceDocumentReaderService {
 			case MARKDOWN -> readMarkdown(resource, filenameOrPath, sourceUrlOrNull);
 			case TEXT -> readText(resource, filenameOrPath, sourceUrlOrNull);
 			case HTML -> readHtml(resource, sourceUrlOrNull);
+			case DOCX -> readDocx(resource, filenameOrPath, sourceUrlOrNull);
+			case PPTX -> readPptx(resource, filenameOrPath, sourceUrlOrNull);
 		};
 		return new ReadResult(type, docs);
 	}
@@ -80,6 +85,12 @@ public class RagResourceDocumentReaderService {
 
 		if (target.endsWith(".pdf")) {
 			return DetectedType.PDF;
+		}
+		if (target.endsWith(".docx")) {
+			return DetectedType.DOCX;
+		}
+		if (target.endsWith(".pptx")) {
+			return DetectedType.PPTX;
 		}
 		if (target.endsWith(".md") || target.endsWith(".markdown")) {
 			return DetectedType.MARKDOWN;
@@ -135,6 +146,39 @@ public class RagResourceDocumentReaderService {
 			return new JsoupDocumentReader(resource, fallback).read();
 		}
 		return docs;
+	}
+
+	/**
+	 * Word(.docx) 문서에서 텍스트를 추출하여 단일 Document로 반환. // Apache POI ExtractorFactory
+	 */
+	private static List<Document> readDocx(Resource resource, String filename, String sourceUrlOrNull) {
+		return extractTextWithPoi(resource, filename, sourceUrlOrNull, "DOCX");
+	}
+
+	/**
+	 * PowerPoint(.pptx) 문서에서 텍스트를 추출하여 단일 Document로 반환. // Apache POI ExtractorFactory
+	 */
+	private static List<Document> readPptx(Resource resource, String filename, String sourceUrlOrNull) {
+		return extractTextWithPoi(resource, filename, sourceUrlOrNull, "PPTX");
+	}
+
+	/** Apache POI ExtractorFactory로 Office 문서 텍스트 추출. // docx/pptx 공통 */
+	private static List<Document> extractTextWithPoi(Resource resource, String filename, String sourceUrlOrNull, String formatLabel) {
+		try (InputStream in = resource.getInputStream();
+				POITextExtractor extractor = ExtractorFactory.createExtractor(in)) {
+			String text = extractor.getText();
+			if (text == null || text.isBlank()) {
+				return List.of();
+			}
+			Map<String, Object> meta = new HashMap<>();
+			meta.put("filename", filename == null ? "unknown" : filename);
+			meta.put("source", sourceUrlOrNull == null ? "upload" : sourceUrlOrNull);
+			meta.put("extractedAt", Instant.now().toString());
+			return List.of(new Document(text.strip(), meta));
+		} catch (Exception e) {
+			String msg = e.getMessage() != null ? e.getMessage() : "알 수 없는 오류";
+			throw new IllegalArgumentException(formatLabel + " 읽기 실패: " + msg);
+		}
 	}
 
 	/**
