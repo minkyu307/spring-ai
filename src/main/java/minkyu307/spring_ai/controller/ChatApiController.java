@@ -1,5 +1,6 @@
 package minkyu307.spring_ai.controller;
 
+import minkyu307.spring_ai.dto.ApiErrorResponse;
 import minkyu307.spring_ai.dto.ChatHistoryDetailDto;
 import minkyu307.spring_ai.dto.ChatHistoryDto;
 import minkyu307.spring_ai.service.ChatService;
@@ -48,9 +49,11 @@ public class ChatApiController {
 				"response", aiResponse
 			));
 		} catch (Exception e) {
-			return ResponseEntity.ok(Map.of(
+			log.error("Send message failed", e);
+			String msg = (e.getMessage() != null && !e.getMessage().isBlank()) ? e.getMessage() : "메시지 전송 중 오류가 발생했습니다.";
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
 				"success", "false",
-				"error", e.getMessage()
+				"error", msg
 			));
 		}
 	}
@@ -59,13 +62,14 @@ public class ChatApiController {
 	 * 모든 채팅 히스토리 목록 조회
 	 */
 	@GetMapping("/histories")
-	public ResponseEntity<List<ChatHistoryDto>> getAllHistories() {
+	public ResponseEntity<?> getAllHistories() {
 		try {
 			List<ChatHistoryDto> histories = chatService.findAllHistories();
 			return ResponseEntity.ok(histories);
 		} catch (Exception e) {
 			log.error("Error getting all histories", e);
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+			String msg = (e.getMessage() != null && !e.getMessage().isBlank()) ? e.getMessage() : "히스토리 목록 조회 중 오류가 발생했습니다.";
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiErrorResponse(msg));
 		}
 	}
 
@@ -73,13 +77,14 @@ public class ChatApiController {
 	 * 특정 대화의 메시지 목록 조회
 	 */
 	@GetMapping("/histories/{conversationId}")
-	public ResponseEntity<ChatHistoryDetailDto> getHistoryMessages(@PathVariable String conversationId) {
+	public ResponseEntity<?> getHistoryMessages(@PathVariable String conversationId) {
 		try {
 			ChatHistoryDetailDto history = chatService.findHistoryMessages(conversationId);
 			return ResponseEntity.ok(history);
 		} catch (Exception e) {
 			log.error("Error getting history messages", e);
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+			String msg = (e.getMessage() != null && !e.getMessage().isBlank()) ? e.getMessage() : "메시지 목록 조회 중 오류가 발생했습니다.";
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiErrorResponse(msg));
 		}
 	}
 }

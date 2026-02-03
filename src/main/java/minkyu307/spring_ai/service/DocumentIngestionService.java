@@ -1,6 +1,5 @@
 package minkyu307.spring_ai.service;
 
-import minkyu307.spring_ai.dto.DocumentIngestResponse;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
@@ -27,14 +26,6 @@ public class DocumentIngestionService {
 		this.vectorStore = vectorStore;
 		this.splitter = splitter;
 		this.titleChatClient = chatClientBuilder.build();
-	}
-
-	/**
-	 * 입력 문서를 청크로 분할한 뒤 VectorStore(PGvector)에 저장한다.
-	 */
-	public DocumentIngestResponse ingest(String content, Map<String, Object> metadata) {
-		IngestionResult result = ingestDocuments(List.of(new Document(content, metadata == null ? Map.of() : metadata)), metadata);
-		return new DocumentIngestResponse(result.chunksIngested());
 	}
 
 	/**

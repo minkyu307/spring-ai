@@ -30,19 +30,20 @@ public class RagDocumentManagementService {
 	}
 
 	/**
-	 * 문서를 삭제한다. // docId 메타데이터 기준으로 해당 문서 청크 전체 삭제
+	 * 문서를 삭제한다. // docId 메타데이터 기준으로 해당 문서 청크 전체 삭제. 존재하지 않으면 false.
 	 */
-	public void deleteDocument(String docId) {
+	public boolean deleteDocument(String docId) {
 		if (docId == null || docId.isBlank()) {
-			return;
+			return false;
 		}
 
 		if (!repository.existsByDocIdMetadata(docId)) {
-			return;
+			return false;
 		}
 
 		FilterExpressionBuilder b = new FilterExpressionBuilder();
 		vectorStore.delete(b.eq("docId", docId).build());
+		return true;
 	}
 }
 
