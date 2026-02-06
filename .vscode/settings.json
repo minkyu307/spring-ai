@@ -1,0 +1,9 @@
+{
+  "java.compile.nullAnalysis.mode": "automatic",
+  "[java]": {
+    "editor.defaultFormatter": "redhat.java"
+  },
+  "editor.detectIndentation": false,
+  "java.format.settings.url": "${workspaceFolder}/java-formatter.xml",
+  "java.format.settings.profile": "VerticalStyle"
+}

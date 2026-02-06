@@ -36,6 +36,19 @@
                 font-size: 1.4em;
                 font-weight: 400;
             }
+            .btn-logout {
+                padding: 6px 14px;
+                background: #5f6368;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                font-size: 0.875em;
+                font-weight: 500;
+                cursor: pointer;
+            }
+            .btn-logout:hover {
+                background: #4a4d52;
+            }
             /* 구분선 전체 너비 + 버튼 구역 패딩은 chat.html sidebar-header와 동일(16px) */
             .sidebar-header {
                 padding: 16px;
@@ -275,6 +288,9 @@
     <body>
         <div class="header">
             <div class="header-title">RAG 문서 관리</div>
+            <form th:action="@{/logout}" method="post">
+                <button type="submit" class="btn-logout">로그아웃</button>
+            </form>
         </div>
 
         <div class="main-layout">
@@ -304,11 +320,11 @@
                         </button>
                     </div>
                     <div class="card-desc">
-                        현재 업로드는 <span class="badge">.txt</span>,
-                        <span class="badge">.md</span>, <span class="badge">.markdown</span>,
-                        <span class="badge">.pdf</span>, <span class="badge">.docx</span>,
-                        <span class="badge">.pptx</span>를 허용하며, 여러 파일을 한 번에 업로드할 수
-                        있습니다. PDF는 페이지 단위로 분리 후, 필요 시 OCR을 수행합니다.
+                        <span class="badge">.txt</span>, <span class="badge">.md</span>,
+                        <span class="badge">.markdown</span>, <span class="badge">.pdf</span>,
+                        <span class="badge">.docx</span>, <span class="badge">.pptx</span>를
+                        허용하며, 여러 파일을 한 번에 업로드할 수 있습니다. PDF는 페이지 단위로 분리
+                        후, 필요 시 OCR을 수행합니다.
                     </div>
                     <div class="status" id="status"></div>
                 </div>

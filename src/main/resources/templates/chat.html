@@ -35,6 +35,22 @@
                 font-size: 1.4em;
                 font-weight: 400;
             }
+            .header-logout {
+                margin-left: auto;
+            }
+            .btn-logout {
+                padding: 6px 14px;
+                background: #5f6368;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                font-size: 0.875em;
+                font-weight: 500;
+                cursor: pointer;
+            }
+            .btn-logout:hover {
+                background: #4a4d52;
+            }
             .main-layout {
                 flex: 1;
                 min-height: 0;
@@ -368,6 +384,9 @@
     <body>
         <div class="header">
             <div class="header-title">AI Chat</div>
+            <form th:action="@{/logout}" method="post" class="header-logout">
+                <button type="submit" class="btn-logout">로그아웃</button>
+            </form>
         </div>
 
         <div class="main-layout">
