@@ -61,6 +61,45 @@ public class ChatMemoryJdbcQueryRepository {
 	}
 
 	/**
+	 * 특정 login_id 소유 대화만 필터링하여 히스토리 요약 목록을 조회한다. chat_conversation 과 JOIN.
+	 */
+	public List<ChatHistorySummary> findHistorySummariesByLoginId(String loginId) {
+		String sql = """
+				SELECT
+					s.conversation_id AS conversation_id,
+					u.first_user_message AS first_user_message,
+					s.last_updated AS last_updated,
+					s.message_count AS message_count
+				FROM (
+					SELECT
+						m.conversation_id,
+						MAX(m."timestamp") AS last_updated,
+						COUNT(*) AS message_count
+					FROM spring_ai_chat_memory m
+					INNER JOIN chat_conversation c ON c.id = m.conversation_id
+					WHERE c.login_id = ?
+					GROUP BY m.conversation_id
+				) s
+				LEFT JOIN LATERAL (
+					SELECT content AS first_user_message
+					FROM spring_ai_chat_memory
+					WHERE conversation_id = s.conversation_id
+					  AND type = 'USER'
+					ORDER BY "timestamp" ASC
+					LIMIT 1
+				) u ON TRUE
+				ORDER BY s.last_updated DESC
+				""";
+
+		return jdbcTemplate.query(sql, ps -> ps.setString(1, loginId), (rs, rowNum) -> new ChatHistorySummary(
+				rs.getString("conversation_id"),
+				rs.getString("first_user_message"),
+				readInstant(rs, "last_updated"),
+				rs.getLong("message_count")
+		));
+	}
+
+	/**
 	 * 특정 conversation_id의 모든 메시지를 시간순으로 조회한다. // Spring AI 테이블을 직접 읽어 히스토리 UI/API에 사용
 	 */
 	public List<ChatMemoryMessage> findMessagesByConversationIdOrderByTimestampAsc(String conversationId) {

@@ -33,6 +33,8 @@ public class SecurityConfig {
                     "/.well-known/**").permitAll()
                 .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**", "/favicon.ico").permitAll()
                 .anyRequest().authenticated())
+            .csrf(csrf -> csrf
+                .ignoringRequestMatchers("/api/**"))
             .formLogin(form -> form
                 .loginPage("/login")
                 .defaultSuccessUrl("/", true))

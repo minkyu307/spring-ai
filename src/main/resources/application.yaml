@@ -24,7 +24,8 @@ spring:
           api-key: ${GEMINI_API_KEY}
           text:
             options:
-              model: text-embedding-004
+              # Gemini API (API key) supports gemini-embedding-001 only; text-embedding-004 is not available on v1beta
+              model: gemini-embedding-001
               dimensions: 768
         chat:
           options:
