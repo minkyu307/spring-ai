@@ -450,55 +450,63 @@
 
             // Conversation ID 관리
             let conversationId = localStorage.getItem('conversationId');
-            if (!conversationId) {
-                conversationId = crypto.randomUUID();
-                localStorage.setItem('conversationId', conversationId);
-            }
 
             // 히스토리 목록 로드
-            async function loadHistories() {
-                try {
-                    const response = await fetch('/api/chat/histories');
-                    const histories = await response.json();
+            async function fetchHistories() {
+                const response = await fetch('/api/chat/histories');
+                if (!response.ok) {
+                    throw new Error(`히스토리 조회 실패 (${response.status})`);
+                }
+                return response.json();
+            }
 
-                    if (histories.length === 0) {
-                        historyList.innerHTML =
-                            '<div class="empty-history">대화 히스토리가 없습니다</div>';
-                        return;
+            function renderHistories(histories) {
+                if (!Array.isArray(histories) || histories.length === 0) {
+                    historyList.innerHTML =
+                        '<div class="empty-history">대화 히스토리가 없습니다</div>';
+                    return;
+                }
+
+                historyList.innerHTML = '';
+                histories.forEach((history) => {
+                    const item = document.createElement('div');
+                    item.className = 'history-item';
+                    if (history.conversationId === conversationId) {
+                        item.classList.add('active');
                     }
 
-                    historyList.innerHTML = '';
-                    histories.forEach((history) => {
-                        const item = document.createElement('div');
-                        item.className = 'history-item';
-                        if (history.conversationId === conversationId) {
-                            item.classList.add('active');
-                        }
+                    const title = document.createElement('div');
+                    title.className = 'history-title';
+                    title.textContent = history.title;
 
-                        const title = document.createElement('div');
-                        title.className = 'history-title';
-                        title.textContent = history.title;
-
-                        const meta = document.createElement('div');
-                        meta.className = 'history-meta';
-                        const date = new Date(history.lastUpdated);
-                        meta.innerHTML = `
+                    const meta = document.createElement('div');
+                    meta.className = 'history-meta';
+                    const date = new Date(history.lastUpdated);
+                    meta.innerHTML = `
                         <span>${formatDate(date)}</span>
                         <span>${history.messageCount}개</span>
                     `;
 
-                        item.appendChild(title);
-                        item.appendChild(meta);
+                    item.appendChild(title);
+                    item.appendChild(meta);
 
-                        item.addEventListener('click', (e) => {
-                            selectHistory(history.conversationId, e.currentTarget);
-                        });
-
-                        historyList.appendChild(item);
+                    item.addEventListener('click', (e) => {
+                        selectHistory(history.conversationId, e.currentTarget);
                     });
+
+                    historyList.appendChild(item);
+                });
+            }
+
+            async function loadHistories() {
+                try {
+                    const histories = await fetchHistories();
+                    renderHistories(histories);
+                    return histories;
                 } catch (error) {
                     console.error('히스토리 로드 실패:', error);
                     historyList.innerHTML = '<div class="empty-history">히스토리 로드 실패</div>';
+                    return [];
                 }
             }
 
@@ -720,13 +728,33 @@
                 }
             });
 
-            // 페이지 로드 시 히스토리 목록 불러오기
-            loadHistories();
+            // 페이지 초기화: 서버 히스토리 기준으로 conversationId 결정
+            async function initializeChatPage() {
+                const histories = await loadHistories();
 
-            // 현재 conversationId에 해당하는 히스토리가 있으면 로드
-            if (conversationId && conversationId !== 'default') {
-                loadHistoryMessages(conversationId).catch(console.error);
+                if (!Array.isArray(histories) || histories.length === 0) {
+                    conversationId = crypto.randomUUID();
+                    localStorage.setItem('conversationId', conversationId);
+                    return;
+                }
+
+                const storedConversationId = localStorage.getItem('conversationId');
+                const hasStoredConversation = histories.some(
+                    (h) => h.conversationId === storedConversationId,
+                );
+
+                conversationId = hasStoredConversation
+                    ? storedConversationId
+                    : histories[0].conversationId; // 최신 대화 자동 선택
+                localStorage.setItem('conversationId', conversationId);
+
+                renderHistories(histories);
+                await loadHistoryMessages(conversationId);
             }
+
+            initializeChatPage().catch((error) => {
+                console.error('초기화 실패:', error);
+            });
         </script>
     </body>
 </html>
