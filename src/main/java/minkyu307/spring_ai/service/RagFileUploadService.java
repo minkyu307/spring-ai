@@ -2,6 +2,7 @@ package minkyu307.spring_ai.service;
 
 import minkyu307.spring_ai.dto.RagFileIngestResultDto;
 import minkyu307.spring_ai.dto.RagMultiFileIngestResponse;
+import minkyu307.spring_ai.security.SecurityUtils;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -39,6 +40,7 @@ public class RagFileUploadService {
 	 */
 	public RagMultiFileIngestResponse upload(List<MultipartFile> files) {
 		List<MultipartFile> safeFiles = files == null ? List.of() : files;
+		String loginId = SecurityUtils.getCurrentLoginId();
 
 		List<RagFileIngestResultDto> results = new ArrayList<>();
 		int processed = 0;
@@ -78,6 +80,7 @@ public class RagFileUploadService {
 				metadata.put("source", "upload");
 				metadata.put("filename", filename);
 				metadata.put("contentType", file.getContentType());
+				metadata.put("loginId", loginId);
 
 				var resource = new ByteArrayResource(bytes) {
 					@Override

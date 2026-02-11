@@ -74,7 +74,9 @@ public class ChatService {
 
         return chatClient.prompt()
             .user(userMessage)
-            .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, conversationId))
+            .advisors(a -> a
+                .param(ChatMemory.CONVERSATION_ID, conversationId)
+                .param(QuestionAnswerAdvisor.FILTER_EXPRESSION, "loginId == '" + loginId + "'"))
             .call()
             .content();
     }

@@ -2,6 +2,7 @@ package minkyu307.spring_ai.service;
 
 import minkyu307.spring_ai.dto.RagUrlIngestRequest;
 import minkyu307.spring_ai.dto.RagUrlIngestResponse;
+import minkyu307.spring_ai.security.SecurityUtils;
 import org.springframework.ai.document.Document;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -34,6 +35,7 @@ public class RagUrlIngestionService {
 		}
 
 		URI uri = URI.create(request.url().trim());
+		String loginId = SecurityUtils.getCurrentLoginId();
 		String scheme = uri.getScheme() == null ? "" : uri.getScheme().toLowerCase();
 		if (!scheme.equals("http") && !scheme.equals("https")) {
 			throw new IllegalArgumentException("Only http/https URL is supported");
@@ -60,6 +62,7 @@ public class RagUrlIngestionService {
 		baseMetadata.put("docId", docId);
 		baseMetadata.put("ingestedAt", Instant.now().toString());
 		baseMetadata.put("detectedType", readResult.detectedType().name());
+		baseMetadata.put("loginId", loginId);
 
 		DocumentIngestionService.IngestionResult result =
 				ingestionService.ingestDocuments(documents, baseMetadata);
