@@ -448,8 +448,8 @@
             const historyList = document.getElementById('historyList');
             const newChatBtn = document.getElementById('newChatBtn');
 
-            // Conversation ID 관리
-            let conversationId = localStorage.getItem('conversationId');
+            // Conversation ID 관리 — 초기화 완료 전까지 null 유지 (구 사용자 ID 오염 방지)
+            let conversationId = null;
 
             // 히스토리 목록 로드
             async function fetchHistories() {
@@ -699,6 +699,11 @@
                     loadingCard.remove();
 
                     if (data.success === 'true') {
+                        // 서버가 반환한 conversationId로 동기화 (다른 사용자 ID 충돌 시 서버가 새 ID를 발급)
+                        if (data.conversationId && data.conversationId !== conversationId) {
+                            conversationId = data.conversationId;
+                            localStorage.setItem('conversationId', conversationId);
+                        }
                         // AI 응답 추가
                         addMessage(data.response, 'ai');
                         // 히스토리 목록 새로고침
@@ -729,6 +734,7 @@
             });
 
             // 페이지 초기화: 서버 히스토리 기준으로 conversationId 결정
+            // localStorage의 ID가 현재 사용자 히스토리에 없으면 새 UUID를 발급한다.
             async function initializeChatPage() {
                 const histories = await loadHistories();
 
@@ -743,9 +749,12 @@
                     (h) => h.conversationId === storedConversationId,
                 );
 
-                conversationId = hasStoredConversation
-                    ? storedConversationId
-                    : histories[0].conversationId; // 최신 대화 자동 선택
+                if (hasStoredConversation) {
+                    conversationId = storedConversationId;
+                } else {
+                    // localStorage의 ID가 현재 사용자 것이 아니면 최신 대화로 교체
+                    conversationId = histories[0].conversationId;
+                }
                 localStorage.setItem('conversationId', conversationId);
 
                 renderHistories(histories);

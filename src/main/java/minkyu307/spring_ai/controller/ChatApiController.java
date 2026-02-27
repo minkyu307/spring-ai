@@ -36,17 +36,17 @@ public class ChatApiController {
 		try {
 			String conversationId = request.get("conversationId");
 			String userMessage = request.get("message");
-			
-			// conversationId가 없으면 기본값 사용
-			if (conversationId == null || conversationId.isEmpty()) {
-				conversationId = "default";
+
+			if (conversationId == null || conversationId.isBlank()) {
+				conversationId = java.util.UUID.randomUUID().toString();
 			}
-			
-			String aiResponse = chatService.chat(conversationId, userMessage);
-			
+
+			ChatService.ChatResult result = chatService.chat(conversationId, userMessage);
+
 			return ResponseEntity.ok(Map.of(
 				"success", "true",
-				"response", aiResponse
+				"response", result.response(),
+				"conversationId", result.conversationId()
 			));
 		} catch (Exception e) {
 			log.error("Send message failed", e);

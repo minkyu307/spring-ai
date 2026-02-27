@@ -56,30 +56,35 @@ public class ChatService {
      * 대화 ID를 포함한 메시지를 AI에게 전달하고 응답을 받음. 현재 로그인 사용자(loginId) 기준으로 chat_conversation
      * 검증/생성 후 MessageChatMemoryAdvisor 가 기록 관리.
      */
-    public String chat(String conversationId, String userMessage) {
+    public ChatResult chat(String conversationId, String userMessage) {
         String loginId = SecurityUtils.getCurrentLoginId();
 
-        chatConversationRepository.findById(conversationId)
-            .ifPresentOrElse(
-                conv -> {
-                    if (!conv.getLoginId().equals(loginId)) {
-                        throw new IllegalStateException("다른 사용자의 대화에 접근할 수 없습니다.");
-                    }
-                },
-                () -> {
-                    String title = userMessage.length() > 50 ? userMessage.substring(0, 50) + "..." : userMessage;
-                    ChatConversation conv = new ChatConversation(conversationId, loginId, title);
-                    chatConversationRepository.save(conv);
-                });
+        // 이미 존재하는 대화가 다른 사용자 소유이면 새 대화로 대체한다.
+        boolean isOtherOwner = chatConversationRepository.findById(conversationId)
+            .map(conv -> !conv.getLoginId().equals(loginId))
+            .orElse(false);
 
-        return chatClient.prompt()
+        final String resolvedId = isOtherOwner ? java.util.UUID.randomUUID().toString() : conversationId;
+
+        chatConversationRepository.findById(resolvedId).ifPresentOrElse(
+            conv -> { /* 이미 본인 소유 대화 — 아무것도 하지 않음 */ },
+            () -> {
+                String title = userMessage.length() > 50 ? userMessage.substring(0, 50) + "..." : userMessage;
+                chatConversationRepository.save(new ChatConversation(resolvedId, loginId, title));
+            });
+
+        String response = chatClient.prompt()
             .user(userMessage)
             .advisors(a -> a
-                .param(ChatMemory.CONVERSATION_ID, conversationId)
+                .param(ChatMemory.CONVERSATION_ID, resolvedId)
                 .param(QuestionAnswerAdvisor.FILTER_EXPRESSION, "loginId == '" + loginId + "'"))
             .call()
             .content();
+
+        return new ChatResult(resolvedId, response);
     }
+
+    public record ChatResult(String conversationId, String response) {}
 
     /**
      * 현재 로그인 사용자의 채팅 히스토리 목록만 조회 (chat_conversation + spring_ai_chat_memory).
