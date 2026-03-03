@@ -1,10 +1,13 @@
 package minkyu307.spring_ai.controller;
 
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
+import org.springframework.web.client.HttpClientErrorException;
 import lombok.RequiredArgsConstructor;
 import minkyu307.spring_ai.repository.UserDoorayApiKeyRepository;
 import minkyu307.spring_ai.security.SecurityUtils;
@@ -73,9 +76,16 @@ public class DoorayWikiApiController {
             new ParameterizedTypeReference<Map<String, Object>>() {});
     }
 
+    /** 동시 병렬 요청 수 상한 — Dooray Rate Limit 대응 */
+    private static final int PARALLEL_BATCH = 5;
+    /** 429 수신 시 재시도 대기(ms) */
+    private static final long RETRY_DELAY_MS = 500;
+    /** 최대 재시도 횟수 */
+    private static final int MAX_RETRY = 3;
+
     /**
-     * 특정 페이지부터 모든 하위 페이지를 BFS로 선조회하여 평탄화된 목록으로 반환.
-     * 각 항목에 parentPageId가 포함되므로 프론트엔드에서 트리 재구성 가능.
+     * 특정 페이지부터 모든 하위 페이지를 BFS 레벨 단위 병렬 조회하여 평탄화된 목록으로 반환.
+     * 같은 레벨을 PARALLEL_BATCH 단위로 묶어 병렬 호출하고, 429 응답 시 재시도.
      */
     @GetMapping("/wikis/{wikiId}/pages/{pageId}/subtree")
     public ResponseEntity<Map<String, Object>> getSubtree(
@@ -84,32 +94,73 @@ public class DoorayWikiApiController {
 
         HttpEntity<Void> entity = new HttpEntity<>(authHeaders());
         List<Map<String, Object>> allPages = new ArrayList<>();
+        List<String> currentLevel = List.of(pageId);
+        ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
 
-        // BFS: 큐에 조회할 parentPageId를 넣고 순차 처리
-        Queue<String> queue = new LinkedList<>();
-        queue.add(pageId);
+        try {
+            while (!currentLevel.isEmpty()) {
+                List<Map<String, Object>> levelPages = new ArrayList<>();
 
-        while (!queue.isEmpty()) {
-            String currentParentId = queue.poll();
-            String url = DOORAY_BASE + "/wiki/v1/wikis/" + wikiId
-                + "/pages?parentPageId=" + currentParentId;
+                // 같은 레벨을 PARALLEL_BATCH 단위로 나눠 병렬 처리 — Rate Limit 방지
+                for (int i = 0; i < currentLevel.size(); i += PARALLEL_BATCH) {
+                    List<String> batch = currentLevel.subList(i,
+                        Math.min(i + PARALLEL_BATCH, currentLevel.size()));
 
-            Map<String, Object> resp = restTemplate.exchange(url, HttpMethod.GET, entity,
-                new ParameterizedTypeReference<Map<String, Object>>() {}).getBody();
+                    List<CompletableFuture<List<Map<String, Object>>>> futures = batch.stream()
+                        .map(parentId -> CompletableFuture.<List<Map<String, Object>>>supplyAsync(
+                            () -> fetchPagesWithRetry(wikiId, parentId, entity), executor))
+                        .collect(Collectors.toList());
 
-            if (resp == null) continue;
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> pages = (List<Map<String, Object>>) resp.get("result");
-            if (pages == null || pages.isEmpty()) continue;
+                    futures.stream()
+                        .map(CompletableFuture::join)
+                        .forEach(levelPages::addAll);
+                }
 
-            allPages.addAll(pages);
-            // 각 페이지의 id를 다음 BFS 레벨로 추가
-            pages.forEach(p -> queue.add(String.valueOf(p.get("id"))));
+                allPages.addAll(levelPages);
+                currentLevel = levelPages.stream()
+                    .map(p -> String.valueOf(p.get("id")))
+                    .collect(Collectors.toList());
+            }
+        } finally {
+            executor.shutdown();
         }
 
         return ResponseEntity.ok(Map.of(
             "result", allPages,
             "totalCount", allPages.size()
         ));
+    }
+
+    /**
+     * 단일 parentPageId에 대한 페이지 목록 조회. 429 응답 시 RETRY_DELAY_MS 대기 후 재시도.
+     */
+    private List<Map<String, Object>> fetchPagesWithRetry(
+        String wikiId, String parentId, HttpEntity<Void> entity) {
+
+        String url = DOORAY_BASE + "/wiki/v1/wikis/" + wikiId
+            + "/pages?parentPageId=" + parentId + "&size=2000";
+
+        for (int attempt = 0; attempt <= MAX_RETRY; attempt++) {
+            try {
+                Map<String, Object> resp = restTemplate.exchange(
+                    url, HttpMethod.GET, entity,
+                    new ParameterizedTypeReference<Map<String, Object>>() {}
+                ).getBody();
+                if (resp == null) return List.of();
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> pages = (List<Map<String, Object>>) resp.get("result");
+                return pages != null ? pages : List.of();
+            } catch (HttpClientErrorException.TooManyRequests e) {
+                if (attempt == MAX_RETRY) throw e;
+                try {
+                    // 재시도마다 대기 시간을 지수적으로 증가
+                    Thread.sleep(RETRY_DELAY_MS * (1L << attempt));
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw new RuntimeException(ie);
+                }
+            }
+        }
+        return List.of();
     }
 }
