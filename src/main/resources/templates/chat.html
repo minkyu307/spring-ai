@@ -38,6 +38,12 @@
             .header-logout {
                 margin-left: auto;
             }
+            .header-actions {
+                margin-left: auto;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
             .btn-logout {
                 padding: 6px 14px;
                 background: #5f6368;
@@ -166,7 +172,9 @@
                 font-weight: 500;
             }
             .message-icon {
-                font-size: 1.2em;
+                font-size: 1em;
+                width: 1.2em;
+                text-align: center;
             }
             .message-content {
                 color: #202124;
@@ -296,9 +304,10 @@
                 margin: auto;
             }
             .placeholder-icon {
-                font-size: 4em;
+                font-size: 3.5em;
                 margin-bottom: 16px;
-                opacity: 0.5;
+                opacity: 0.4;
+                color: #5f6368;
             }
             .placeholder-text {
                 font-size: 1.1em;
@@ -384,9 +393,11 @@
     <body>
         <div class="header">
             <div class="header-title">AI Chat</div>
-            <form th:action="@{/logout}" method="post" class="header-logout">
-                <button type="submit" class="btn-logout">로그아웃</button>
-            </form>
+            <div class="header-actions">
+                <form th:action="@{/logout}" method="post">
+                    <button type="submit" class="btn-logout">로그아웃</button>
+                </form>
+            </div>
         </div>
 
         <div class="main-layout">
@@ -394,7 +405,7 @@
             <div class="sidebar" id="sidebar">
                 <div class="sidebar-header">
                     <button class="new-chat-btn" id="newChatBtn">
-                        <span>➕</span>
+                        <i class="fa-solid fa-plus"></i>
                         <span>새 대화</span>
                     </button>
                     <div style="height: 10px"></div>
@@ -402,7 +413,7 @@
                         href="/rag/documents"
                         class="new-chat-btn"
                         style="background: #34a853; text-decoration: none">
-                        <span>📚</span>
+                        <i class="fa-solid fa-book-open"></i>
                         <span>문서 관리</span>
                     </a>
                 </div>
@@ -415,7 +426,7 @@
             <div class="chat-container">
                 <div class="chat-area" id="chatArea">
                     <div class="placeholder" id="placeholder">
-                        <div class="placeholder-icon">💬</div>
+                        <div class="placeholder-icon"><i class="fa-regular fa-comments"></i></div>
                         <div class="placeholder-text">
                             왼쪽에서 대화를 선택하거나 새 대화를 시작하세요
                         </div>
@@ -436,6 +447,7 @@
             </div>
         </div>
 
+        <link rel="stylesheet" th:href="@{/webjars/font-awesome/css/all.min.css}" />
         <!-- 마크다운 렌더링: marked(파싱) + DOMPurify(XSS 방지) -->
         <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
@@ -580,7 +592,7 @@
                 newPlaceholder.className = 'placeholder';
                 newPlaceholder.id = 'placeholder';
                 newPlaceholder.innerHTML = `
-                <div class="placeholder-icon">💬</div>
+                <div class="placeholder-icon"><i class="fa-regular fa-comments"></i></div>
                 <div class="placeholder-text">새 대화를 시작하세요</div>
             `;
                 chatArea.appendChild(newPlaceholder);
@@ -615,16 +627,16 @@
                 const label = document.createElement('span');
 
                 if (type === 'user') {
-                    icon.textContent = '👤';
+                    icon.innerHTML = '<i class="fa-solid fa-user"></i>';
                     label.textContent = 'You';
                 } else if (type === 'ai') {
-                    icon.textContent = '✨';
+                    icon.innerHTML = '<i class="fa-solid fa-robot"></i>';
                     label.textContent = 'AI';
                 } else if (type === 'error') {
-                    icon.textContent = '⚠️';
+                    icon.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
                     label.textContent = 'Error';
                 } else if (type === 'loading') {
-                    icon.textContent = '⏳';
+                    icon.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
                     label.textContent = 'AI';
                 }
 
@@ -764,6 +776,7 @@
             initializeChatPage().catch((error) => {
                 console.error('초기화 실패:', error);
             });
+
         </script>
     </body>
 </html>

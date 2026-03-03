@@ -4,6 +4,7 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>RAG Documents - Spring AI</title>
+        <link rel="stylesheet" th:href="@{/webjars/font-awesome/css/all.min.css}" />
         <style>
             * {
                 margin: 0;
@@ -36,6 +37,11 @@
                 font-size: 1.4em;
                 font-weight: 400;
             }
+            .header-actions {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
             .btn-logout {
                 padding: 6px 14px;
                 background: #5f6368;
@@ -49,6 +55,128 @@
             .btn-logout:hover {
                 background: #4a4d52;
             }
+            /* 사용자 설정 다이얼로그 */
+            .settings-backdrop {
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.45);
+                display: none;
+                align-items: center;
+                justify-content: center;
+                padding: 16px;
+                z-index: 2000;
+            }
+            .settings-backdrop.open {
+                display: flex;
+            }
+            .settings-dialog {
+                width: min(480px, 100%);
+                background: white;
+                border-radius: 12px;
+                border: 1px solid #e8eaed;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+                padding: 24px;
+            }
+            .settings-title {
+                font-size: 1.05em;
+                font-weight: 700;
+                margin-bottom: 20px;
+                color: #202124;
+            }
+            .settings-field {
+                margin-bottom: 16px;
+            }
+            .settings-label {
+                display: block;
+                font-size: 0.875em;
+                font-weight: 600;
+                color: #3c4043;
+                margin-bottom: 6px;
+            }
+            .settings-input {
+                width: 100%;
+                padding: 10px 14px;
+                border: 1px solid #dadce0;
+                border-radius: 8px;
+                font-size: 0.95em;
+                font-family: inherit;
+                box-sizing: border-box;
+                transition: border-color 0.2s;
+            }
+            .settings-input:focus {
+                outline: none;
+                border-color: #1967d2;
+            }
+            .settings-hint {
+                margin-top: 6px;
+                font-size: 0.8em;
+                color: #5f6368;
+                line-height: 1.4;
+            }
+            .settings-actions {
+                margin-top: 20px;
+                display: flex;
+                gap: 10px;
+                justify-content: flex-end;
+            }
+            .btn-settings-cancel {
+                padding: 8px 16px;
+                background: transparent;
+                color: #5f6368;
+                border: 1px solid #dadce0;
+                border-radius: 6px;
+                font-size: 0.875em;
+                font-weight: 500;
+                cursor: pointer;
+            }
+            .btn-settings-cancel:hover {
+                background: #f1f3f4;
+            }
+            .btn-settings-save {
+                padding: 8px 16px;
+                background: #1967d2;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                font-size: 0.875em;
+                font-weight: 500;
+                cursor: pointer;
+            }
+            .btn-settings-save:hover:not(:disabled) {
+                background: #1557b0;
+            }
+            .btn-settings-save:disabled {
+                background: #dadce0;
+                cursor: not-allowed;
+            }
+            .settings-section-label {
+                font-size: 0.8em;
+                font-weight: 700;
+                color: #5f6368;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                margin-bottom: 8px;
+            }
+            .settings-apikey-row {
+                display: flex;
+                gap: 8px;
+                align-items: center;
+            }
+            .settings-apikey-row .settings-input {
+                flex: 1;
+            }
+            .settings-divider {
+                border: none;
+                border-top: 1px solid #e8eaed;
+                margin: 16px 0;
+            }
+            .settings-status {
+                margin-top: 8px;
+                font-size: 0.85em;
+                min-height: 1.2em;
+            }
+            .settings-status.success { color: #188038; }
+            .settings-status.error   { color: #d93025; }
             /* 구분선 전체 너비 + 버튼 구역 패딩은 chat.html sidebar-header와 동일(16px) */
             .sidebar-header {
                 padding: 16px;
@@ -288,16 +416,57 @@
     <body>
         <div class="header">
             <div class="header-title">RAG 문서 관리</div>
-            <form th:action="@{/logout}" method="post">
-                <button type="submit" class="btn-logout">로그아웃</button>
-            </form>
+            <div class="header-actions">
+                <form th:action="@{/logout}" method="post">
+                    <button type="submit" class="btn-logout">로그아웃</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Dooray Wiki 업로드 다이얼로그 -->
+        <div class="settings-backdrop" id="settingsBackdrop" aria-hidden="true">
+            <div class="settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settingsDialogTitle">
+                <div class="settings-title" id="settingsDialogTitle">
+                    <i class="fa-solid fa-upload"></i> Dooray Wiki 업로드
+                </div>
+
+                <!-- API 키 섹션 -->
+                <div class="settings-section-label">API 키</div>
+                <div class="settings-field">
+                    <div class="settings-apikey-row">
+                        <input
+                            class="settings-input"
+                            type="password"
+                            id="doorayApiKeyInput"
+                            placeholder="dooray-api 토큰을 입력하세요"
+                            autocomplete="off" />
+                        <button type="button" class="btn-settings-save" id="settingsSaveBtn">저장</button>
+                    </div>
+                    <div class="settings-hint">
+                        <a href="https://ligaccuver.dooray.com/setting/api/token" target="_blank" rel="noopener noreferrer">두레이 개인설정 &gt; API &gt; 개인 인증 토큰</a>에서 발급받은 키를 입력하세요.
+                    </div>
+                    <div class="settings-status" id="settingsStatus"></div>
+                </div>
+
+                <div class="settings-divider"></div>
+
+                <!-- 업로드 섹션 (추후 구현) -->
+                <div class="settings-section-label">Wiki 페이지 업로드</div>
+                <div class="settings-field">
+                    <div class="settings-hint">Wiki 업로드 기능은 준비 중입니다.</div>
+                </div>
+
+                <div class="settings-actions">
+                    <button type="button" class="btn-settings-cancel" id="settingsCancelBtn">닫기</button>
+                </div>
+            </div>
         </div>
 
         <div class="main-layout">
             <aside class="sidebar" aria-label="문서 적재">
                 <div class="sidebar-header">
                     <a href="/chat" class="sidebar-nav-btn">
-                        <span>💬</span>
+                        <i class="fa-regular fa-comments"></i>
                         <span>채팅으로</span>
                     </a>
                 </div>
@@ -338,6 +507,17 @@
                         <span class="badge">HTML</span>, <span class="badge">PDF</span>,
                         <span class="badge">Markdown</span>, <span class="badge">TXT</span>는 자동
                         판별됩니다.
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="row">
+                        <button class="btn btn-primary" id="openDoorayWikiBtn">
+                            <i class="fa-solid fa-upload" style="margin-right: 6px;"></i>Dooray Wiki 업로드
+                        </button>
+                    </div>
+                    <div class="card-desc">
+                        두레이 Wiki 페이지를 Vector DB에 적재합니다.
                     </div>
                 </div>
             </aside>
@@ -637,6 +817,67 @@
             });
             refreshBtn.addEventListener('click', loadDocs);
             loadDocs();
+
+            // 사용자 설정 다이얼로그
+            const settingsBackdrop = document.getElementById('settingsBackdrop');
+            const settingsCancelBtn = document.getElementById('settingsCancelBtn');
+            const settingsSaveBtn = document.getElementById('settingsSaveBtn');
+            const doorayApiKeyInput = document.getElementById('doorayApiKeyInput');
+            const settingsStatus = document.getElementById('settingsStatus');
+
+            function setSettingsStatus(msg, type) {
+                settingsStatus.textContent = msg || '';
+                settingsStatus.className = 'settings-status' + (type ? ' ' + type : '');
+            }
+
+            async function openSettingsDialog() {
+                setSettingsStatus('');
+                doorayApiKeyInput.value = '';
+                settingsBackdrop.classList.add('open');
+                settingsBackdrop.setAttribute('aria-hidden', 'false');
+                try {
+                    const res = await fetch('/api/settings/dooray-apikey');
+                    if (res.ok) {
+                        const data = await res.json();
+                        doorayApiKeyInput.value = data.apiKey || '';
+                    }
+                } catch (_) {}
+                doorayApiKeyInput.focus();
+            }
+
+            function closeSettingsDialog() {
+                settingsBackdrop.classList.remove('open');
+                settingsBackdrop.setAttribute('aria-hidden', 'true');
+                setSettingsStatus('');
+            }
+
+            async function saveSettings() {
+                const apiKey = doorayApiKeyInput.value.trim();
+                settingsSaveBtn.disabled = true;
+                setSettingsStatus('저장 중...', '');
+                try {
+                    const res = await fetch('/api/settings/dooray-apikey', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ apiKey }),
+                    });
+                    if (!res.ok) throw new Error(`저장 실패 (${res.status})`);
+                    setSettingsStatus('저장되었습니다.', 'success');
+                } catch (e) {
+                    setSettingsStatus(e.message, 'error');
+                } finally {
+                    settingsSaveBtn.disabled = false;
+                }
+            }
+
+            const openDoorayWikiBtn = document.getElementById('openDoorayWikiBtn');
+
+            openDoorayWikiBtn.addEventListener('click', openSettingsDialog);
+            settingsCancelBtn.addEventListener('click', closeSettingsDialog);
+            settingsSaveBtn.addEventListener('click', saveSettings);
+            doorayApiKeyInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); saveSettings(); }
+            });
         </script>
     </body>
 </html>

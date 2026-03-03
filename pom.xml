@@ -95,6 +95,17 @@
             <artifactId>poi-ooxml</artifactId>
             <version>5.2.5</version>
         </dependency>
+        <!-- Font Awesome 정적 리소스 (오프라인 사용 가능) -->
+        <dependency>
+            <groupId>org.webjars</groupId>
+            <artifactId>font-awesome</artifactId>
+            <version>6.7.2</version>
+        </dependency>
+        <!-- webjars 버전 없이 /webjars/font-awesome/css/all.min.css 경로 사용 -->
+        <dependency>
+            <groupId>org.webjars</groupId>
+            <artifactId>webjars-locator-lite</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
