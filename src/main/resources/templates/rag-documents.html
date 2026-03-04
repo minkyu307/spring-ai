@@ -532,7 +532,7 @@
     </head>
     <body>
         <div class="header">
-            <div class="header-title">RAG 문서 관리</div>
+            <div class="header-title">문서 관리</div>
             <div class="header-actions">
                 <form th:action="@{/logout}" method="post">
                     <button type="submit" class="btn-logout">로그아웃</button>
@@ -1022,18 +1022,36 @@
 
             /**
              * cb 변경 시 하위 전파 + 상위 indeterminate 갱신.
+             * 미렌더링된 하위 childContainer를 먼저 채운 뒤 cb 동기화.
              * @param {HTMLInputElement} cb - 변경된 체크박스
              * @param {HTMLElement} node   - cb가 속한 .tree-node
              */
             function onCbChange(cb, node) {
-                // 1. 하위 모든 cb를 동일 상태로
+                // 1. 미렌더링 하위 컨테이너를 재귀로 모두 채움 (추가 API 없이 allPages 클로저 활용)
+                ensureAllRendered(node);
+                // 2. 하위 모든 cb를 동일 상태로
                 node.querySelectorAll('input.tree-cb').forEach(child => {
                     child.checked = cb.checked;
                     child.indeterminate = false;
                 });
-                // 2. 상위 체인 갱신
+                // 3. 상위 체인 갱신
                 propagateUp(node);
                 updateSelectedCount();
+            }
+
+            /**
+             * node 하위의 미렌더링 tree-children을 깊이 우선으로 재귀 탐색하며 모두 렌더링.
+             * _ensureRendered가 붙은 컨테이너만 처리하므로 subtree API 미로드 노드는 건드리지 않음.
+             * @param {HTMLElement} node
+             */
+            function ensureAllRendered(node) {
+                node.querySelectorAll(':scope > div.tree-children').forEach(container => {
+                    if (container.childElementCount === 0 && typeof container._ensureRendered === 'function') {
+                        container._ensureRendered();
+                    }
+                    // 채워진 후 그 하위도 재귀 탐색
+                    container.querySelectorAll('.tree-node').forEach(child => ensureAllRendered(child));
+                });
             }
 
             /** node의 부모 .tree-node들을 루트까지 올라가며 indeterminate/checked 갱신 */
@@ -1292,6 +1310,12 @@
                     childContainer.className = 'tree-children';
 
                     if (hasChildren) {
+                        // 토글 펼치기 전에도 cb 동기화가 가능하도록 lazy 렌더링 함수를 컨테이너에 보관
+                        childContainer._ensureRendered = () => {
+                            if (childContainer.childElementCount === 0) {
+                                renderSubtree(wikiId, page.id, allPages, childContainer, depth + 1);
+                            }
+                        };
                         let open = false;
                         toggle.addEventListener('click', (e) => {
                             e.stopPropagation();
@@ -1299,16 +1323,14 @@
                             if (open) {
                                 childContainer.classList.add('open');
                                 toggle.innerHTML = '<i class="fa-solid fa-chevron-down"></i>';
-                                if (childContainer.childElementCount === 0) {
-                                    renderSubtree(wikiId, page.id, allPages, childContainer, depth + 1);
-                                    // 이 노드의 cb가 checked면 새로 렌더링된 하위 cb 전체 동기화
-                                    if (cb.checked) {
-                                        childContainer.querySelectorAll('input.tree-cb').forEach(c => {
-                                            c.checked = true;
-                                            c.indeterminate = false;
-                                        });
-                                        updateSelectedCount();
-                                    }
+                                childContainer._ensureRendered();
+                                // 이 노드의 cb가 checked면 새로 렌더링된 하위 cb 전체 동기화
+                                if (cb.checked) {
+                                    childContainer.querySelectorAll('input.tree-cb').forEach(c => {
+                                        c.checked = true;
+                                        c.indeterminate = false;
+                                    });
+                                    updateSelectedCount();
                                 }
                             } else {
                                 childContainer.classList.remove('open');
