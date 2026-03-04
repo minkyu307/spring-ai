@@ -294,6 +294,133 @@
             }
             .wiki-upload-status.success { color: #188038; }
             .wiki-upload-status.error   { color: #d93025; }
+            /* Wiki 미리보기 다이얼로그 */
+            .wiki-preview-backdrop {
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.55);
+                display: none;
+                align-items: center;
+                justify-content: center;
+                padding: 16px;
+                z-index: 3000;
+            }
+            .wiki-preview-backdrop.open {
+                display: flex;
+            }
+            .wiki-preview-dialog {
+                width: min(860px, 100%);
+                max-height: 88vh;
+                display: flex;
+                flex-direction: column;
+                background: white;
+                border-radius: 12px;
+                border: 1px solid #e8eaed;
+                box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22);
+                overflow: hidden;
+            }
+            .wiki-preview-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 16px 20px;
+                border-bottom: 1px solid #e8eaed;
+                background: #f8f9fa;
+                flex-shrink: 0;
+            }
+            .wiki-preview-title {
+                font-size: 1em;
+                font-weight: 700;
+                color: #202124;
+            }
+            .wiki-preview-close {
+                background: none;
+                border: none;
+                cursor: pointer;
+                color: #5f6368;
+                font-size: 1.1em;
+                padding: 4px 8px;
+                border-radius: 4px;
+                line-height: 1;
+            }
+            .wiki-preview-close:hover { background: #e8eaed; }
+            .wiki-preview-tabs {
+                display: flex;
+                gap: 0;
+                border-bottom: 1px solid #e8eaed;
+                background: #f8f9fa;
+                flex-shrink: 0;
+                overflow-x: auto;
+            }
+            .wiki-preview-tab {
+                padding: 8px 16px;
+                font-size: 0.85em;
+                font-weight: 500;
+                color: #5f6368;
+                cursor: pointer;
+                border-bottom: 2px solid transparent;
+                white-space: nowrap;
+                transition: color 0.15s, border-color 0.15s;
+                background: none;
+                border-top: none;
+                border-left: none;
+                border-right: none;
+            }
+            .wiki-preview-tab:hover { color: #1967d2; }
+            .wiki-preview-tab.active {
+                color: #1967d2;
+                border-bottom-color: #1967d2;
+                font-weight: 600;
+            }
+            .wiki-preview-body {
+                flex: 1;
+                overflow-y: auto;
+                padding: 20px 24px;
+                min-height: 0;
+            }
+            .wiki-preview-page-title {
+                font-size: 1.1em;
+                font-weight: 700;
+                color: #202124;
+                margin-bottom: 12px;
+                padding-bottom: 8px;
+                border-bottom: 1px solid #e8eaed;
+            }
+            .wiki-preview-content {
+                font-size: 0.9em;
+                color: #3c4043;
+                line-height: 1.7;
+                white-space: pre-wrap;
+                word-break: break-word;
+                font-family: 'Google Sans', 'Roboto', sans-serif;
+            }
+            .wiki-preview-loading {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                color: #5f6368;
+                font-size: 0.9em;
+                padding: 24px 0;
+            }
+            .wiki-preview-error {
+                color: #d93025;
+                font-size: 0.9em;
+                padding: 12px 0;
+            }
+            .wiki-preview-meta {
+                font-size: 0.8em;
+                color: #9aa0a6;
+                margin-bottom: 10px;
+            }
+            .wiki-preview-footer {
+                padding: 12px 20px;
+                border-top: 1px solid #e8eaed;
+                display: flex;
+                justify-content: flex-end;
+                gap: 10px;
+                flex-shrink: 0;
+                background: #f8f9fa;
+            }
             /* 구분선 전체 너비 + 버튼 구역 패딩은 chat.html sidebar-header와 동일(16px) */
             .sidebar-header {
                 padding: 16px;
@@ -689,6 +816,35 @@
                     </div>
                 </div>
             </main>
+        </div>
+
+        <!-- Wiki 내용 미리보기 다이얼로그 -->
+        <div class="wiki-preview-backdrop" id="wikiPreviewBackdrop" aria-hidden="true">
+            <div class="wiki-preview-dialog" role="dialog" aria-modal="true" aria-labelledby="wikiPreviewTitle">
+                <div class="wiki-preview-header">
+                    <div class="wiki-preview-title" id="wikiPreviewTitle">
+                        <i class="fa-solid fa-eye"></i> Wiki 페이지 내용 미리보기
+                    </div>
+                    <button type="button" class="wiki-preview-close" id="wikiPreviewCloseBtn" aria-label="닫기">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <div class="wiki-preview-tabs" id="wikiPreviewTabs"></div>
+                <div class="wiki-preview-body" id="wikiPreviewBody">
+                    <div class="wiki-preview-loading">
+                        <i class="fa-solid fa-spinner fa-spin"></i> 불러오는 중...
+                    </div>
+                </div>
+                <div class="wiki-preview-footer" style="flex-direction: column; align-items: stretch; gap: 8px;">
+                    <div id="wikiIngestStatus" style="font-size:0.85em; min-height:1.2em;"></div>
+                    <div style="display:flex; justify-content:flex-end; gap:10px;">
+                        <button type="button" class="btn-settings-cancel" id="wikiPreviewCancelBtn">닫기</button>
+                        <button type="button" class="btn-wiki-upload" id="wikiIngestBtn">
+                            <i class="fa-solid fa-database"></i> Vector DB 적재
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="modal-backdrop" id="urlModalBackdrop" aria-hidden="true">
@@ -1352,14 +1508,231 @@
             doorayApiKeyInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') { e.preventDefault(); saveSettings(); }
             });
-            wikiUploadBtn.addEventListener('click', () => {
-                // TODO: 선택된 노드 기반 업로드 구현
-                const checkedNodes = [...wikiTreeWrap.querySelectorAll('input.tree-cb:checked')]
-                    .map(cb => cb.closest('.tree-node'))
-                    .filter(Boolean)
-                    .map(n => n.dataset.pageId || n.dataset.wikiId);
-                setWikiUploadStatus(`선택된 노드: ${checkedNodes.join(', ')} (업로드 기능 구현 예정)`, '');
+            wikiUploadBtn.addEventListener('click', openWikiPreview);
+
+            // ── Wiki 미리보기 다이얼로그 ──────────────────────────────────
+            const wikiPreviewBackdrop  = document.getElementById('wikiPreviewBackdrop');
+            const wikiPreviewTabs      = document.getElementById('wikiPreviewTabs');
+            const wikiPreviewBody      = document.getElementById('wikiPreviewBody');
+            const wikiPreviewCloseBtn  = document.getElementById('wikiPreviewCloseBtn');
+            const wikiPreviewCancelBtn = document.getElementById('wikiPreviewCancelBtn');
+            const wikiIngestBtn        = document.getElementById('wikiIngestBtn');
+            const wikiIngestStatus     = document.getElementById('wikiIngestStatus');
+
+            /** 현재 미리보기 중인 페이지 목록 (적재 버튼에서 참조) */
+            let currentPreviewPages = [];
+
+            function setWikiIngestStatus(msg, type) {
+                wikiIngestStatus.textContent = msg || '';
+                wikiIngestStatus.style.color = type === 'error' ? '#d93025'
+                    : type === 'success' ? '#188038' : '#5f6368';
+            }
+
+            /** 미리보기 다이얼로그 닫기 */
+            function closeWikiPreview() {
+                wikiPreviewBackdrop.classList.remove('open');
+                wikiPreviewBackdrop.setAttribute('aria-hidden', 'true');
+                wikiPreviewTabs.innerHTML = '';
+                wikiPreviewBody.innerHTML = '';
+                setWikiIngestStatus('');
+                currentPreviewPages = [];
+                wikiIngestBtn.disabled = false;
+            }
+
+            wikiPreviewCloseBtn.addEventListener('click', closeWikiPreview);
+            wikiPreviewCancelBtn.addEventListener('click', closeWikiPreview);
+            wikiPreviewBackdrop.addEventListener('click', (e) => {
+                if (e.target === wikiPreviewBackdrop) closeWikiPreview();
             });
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && wikiPreviewBackdrop.classList.contains('open')) {
+                    closeWikiPreview();
+                }
+            });
+
+            /** Vector DB 적재 실행 */
+            wikiIngestBtn.addEventListener('click', async () => {
+                if (currentPreviewPages.length === 0) return;
+                wikiIngestBtn.disabled = true;
+                setWikiIngestStatus(`적재 중... (${currentPreviewPages.length}개 페이지)`, '');
+
+                try {
+                    const res = await fetch('/api/rag/documents/wiki', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            pages: currentPreviewPages.map(p => ({ wikiId: p.wikiId, pageId: p.pageId }))
+                        })
+                    });
+
+                    if (!res.ok) {
+                        const msg = await readErrorMessage(res);
+                        throw new Error(`적재 실패 (${res.status}): ${msg || res.statusText}`);
+                    }
+
+                    const data = await res.json();
+                    const succeeded = Number(data.succeededPages || 0);
+                    const failed    = Number(data.failedPages || 0);
+                    const chunks    = Number(data.totalChunksIngested || 0);
+
+                    let statusMsg = `적재 완료: 성공 ${succeeded} / 실패 ${failed} (총 청크 ${chunks}개)`;
+                    if (failed > 0) {
+                        const failLines = (data.results || [])
+                            .filter(r => r.status === 'FAILED')
+                            .map(r => `• ${r.pageId}: ${r.error || '실패'}`);
+                        if (failLines.length) statusMsg += '\n' + failLines.join('\n');
+                    }
+                    setWikiIngestStatus(statusMsg, failed > 0 ? 'error' : 'success');
+                    await loadDocs();
+                } catch (e) {
+                    setWikiIngestStatus(e.message, 'error');
+                    wikiIngestBtn.disabled = false;
+                }
+            });
+
+            /**
+             * 선택된 체크박스 노드에서 { wikiId, pageId, label } 목록 수집.
+             * 상위 노드가 이미 선택된 경우 하위 중복 제거(최상위 선택 우선).
+             */
+            function collectSelectedPages() {
+                const checked = [...wikiTreeWrap.querySelectorAll('input.tree-cb:checked')];
+                const result = [];
+                const seenPageIds = new Set();
+
+                checked.forEach(cb => {
+                    const node = cb.closest('.tree-node');
+                    if (!node) return;
+                    const pageId = node.dataset.pageId;
+                    if (!pageId || seenPageIds.has(pageId)) return;
+
+                    // 상위 노드 중 이미 선택된 pageId가 있으면 스킵(중복 방지)
+                    let ancestor = node.parentElement?.closest('.tree-node');
+                    let dominated = false;
+                    while (ancestor) {
+                        if (seenPageIds.has(ancestor.dataset.pageId)) {
+                            dominated = true;
+                            break;
+                        }
+                        ancestor = ancestor.parentElement?.closest('.tree-node');
+                    }
+                    if (dominated) return;
+
+                    // wikiId는 가장 가까운 조상 [data-wiki-id] 노드에서 추출
+                    const wikiNode = node.closest('[data-wiki-id]');
+                    const wikiId = wikiNode ? wikiNode.dataset.wikiId : null;
+                    const label = node.querySelector('.tree-label')?.textContent?.trim() || pageId;
+
+                    seenPageIds.add(pageId);
+                    result.push({ wikiId, pageId, label });
+                });
+                return result;
+            }
+
+            /** 탭 전환 */
+            function switchPreviewTab(idx, pages, contents) {
+                wikiPreviewTabs.querySelectorAll('.wiki-preview-tab').forEach((t, i) => {
+                    t.classList.toggle('active', i === idx);
+                });
+                renderPreviewContent(pages[idx], contents[idx]);
+            }
+
+            /** 단일 페이지 내용 렌더링 */
+            function renderPreviewContent(page, content) {
+                if (content.loading) {
+                    wikiPreviewBody.innerHTML = `
+                        <div class="wiki-preview-loading">
+                            <i class="fa-solid fa-spinner fa-spin"></i> 불러오는 중...
+                        </div>`;
+                    return;
+                }
+                if (content.error) {
+                    wikiPreviewBody.innerHTML = `
+                        <div class="wiki-preview-page-title">${escapeHtml(page.label)}</div>
+                        <div class="wiki-preview-error"><i class="fa-solid fa-circle-exclamation"></i> ${escapeHtml(content.error)}</div>`;
+                    return;
+                }
+
+                const result = content.data?.result || {};
+                const subject = result.subject || page.label;
+                const body = result.body || {};
+                // 공식 API 문서 기준: body.mimeType은 항상 text/x-markdown
+                const rawContent = body.content || '(본문 없음)';
+
+                // 마크다운을 간단히 HTML로 변환 (헤더, 굵게, 코드블록, 줄바꿈)
+                const contentHtml = `<div class="wiki-preview-content" style="white-space:pre-wrap">${escapeHtml(rawContent)}</div>`;
+
+                const updatedAt = result.updatedAt ? new Date(result.updatedAt).toLocaleString('ko-KR') : '';
+                const metaHtml = updatedAt
+                    ? `<div class="wiki-preview-meta">최종 수정: ${escapeHtml(updatedAt)}</div>`
+                    : '';
+
+                wikiPreviewBody.innerHTML = `
+                    <div class="wiki-preview-page-title">${escapeHtml(subject)}</div>
+                    ${metaHtml}
+                    ${contentHtml}`;
+            }
+
+            /** 선택 항목 업로드 버튼 클릭 → 미리보기 다이얼로그 열기 */
+            async function openWikiPreview() {
+                const pages = collectSelectedPages();
+                if (pages.length === 0) {
+                    setWikiUploadStatus('선택된 항목이 없습니다.', 'error');
+                    return;
+                }
+
+                // 적재 버튼에서 참조할 수 있도록 모듈 스코프에 저장
+                currentPreviewPages = pages;
+                wikiIngestBtn.disabled = false;
+                setWikiIngestStatus('');
+
+                // 다이얼로그 열기
+                wikiPreviewBackdrop.classList.add('open');
+                wikiPreviewBackdrop.setAttribute('aria-hidden', 'false');
+
+                // contents 배열: 각 페이지의 로딩/에러/데이터 상태
+                const contents = pages.map(() => ({ loading: true, error: null, data: null }));
+                let activeTab = 0;
+
+                // 탭 생성
+                wikiPreviewTabs.innerHTML = '';
+                pages.forEach((page, idx) => {
+                    const tab = document.createElement('button');
+                    tab.type = 'button';
+                    tab.className = 'wiki-preview-tab' + (idx === 0 ? ' active' : '');
+                    tab.textContent = page.label.length > 20 ? page.label.slice(0, 18) + '…' : page.label;
+                    tab.title = page.label;
+                    tab.addEventListener('click', () => {
+                        activeTab = idx;
+                        switchPreviewTab(idx, pages, contents);
+                    });
+                    wikiPreviewTabs.appendChild(tab);
+                });
+
+                // 첫 탭 로딩 상태 표시
+                renderPreviewContent(pages[0], contents[0]);
+
+                // 모든 페이지 병렬 조회
+                await Promise.all(pages.map(async (page, idx) => {
+                    try {
+                        if (!page.wikiId || !page.pageId) throw new Error('wikiId 또는 pageId를 찾을 수 없습니다.');
+                        const res = await fetch(`/api/dooray/wiki/wikis/${encodeURIComponent(page.wikiId)}/pages/${encodeURIComponent(page.pageId)}`);
+                        if (!res.ok) {
+                            const msg = await readErrorMessage(res);
+                            throw new Error(`조회 실패 (${res.status}): ${msg || res.statusText}`);
+                        }
+                        contents[idx] = { loading: false, error: null, data: await res.json() };
+                    } catch (e) {
+                        contents[idx] = { loading: false, error: e.message, data: null };
+                    }
+                    // 현재 활성 탭이면 즉시 갱신
+                    if (idx === activeTab) {
+                        renderPreviewContent(pages[idx], contents[idx]);
+                    }
+                }));
+
+                // 모두 로드 완료 후 현재 탭 재렌더링
+                renderPreviewContent(pages[activeTab], contents[activeTab]);
+            }
         </script>
     </body>
 </html>

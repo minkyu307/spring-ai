@@ -4,9 +4,11 @@ import minkyu307.spring_ai.dto.ApiErrorResponse;
 import minkyu307.spring_ai.dto.RagDocumentListItemDto;
 import minkyu307.spring_ai.dto.RagMultiFileIngestResponse;
 import minkyu307.spring_ai.dto.RagUrlIngestRequest;
+import minkyu307.spring_ai.dto.RagWikiIngestRequest;
 import minkyu307.spring_ai.service.RagDocumentManagementService;
 import minkyu307.spring_ai.service.RagFileUploadService;
 import minkyu307.spring_ai.service.RagUrlIngestionService;
+import minkyu307.spring_ai.service.RagWikiIngestionService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -25,15 +27,18 @@ public class RagDocumentController {
 	private final RagDocumentManagementService managementService;
 	private final RagFileUploadService fileUploadService;
 	private final RagUrlIngestionService urlIngestionService;
+	private final RagWikiIngestionService wikiIngestionService;
 
 	public RagDocumentController(
 			RagDocumentManagementService managementService,
 			RagFileUploadService fileUploadService,
-			RagUrlIngestionService urlIngestionService
+			RagUrlIngestionService urlIngestionService,
+			RagWikiIngestionService wikiIngestionService
 	) {
 		this.managementService = managementService;
 		this.fileUploadService = fileUploadService;
 		this.urlIngestionService = urlIngestionService;
+		this.wikiIngestionService = wikiIngestionService;
 	}
 
 	/**
@@ -69,6 +74,26 @@ public class RagDocumentController {
 		catch (Exception e) {
 			String message = (e.getMessage() == null || e.getMessage().isBlank())
 					? "URL 적재 중 오류가 발생했습니다."
+					: e.getMessage();
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiErrorResponse(message));
+		}
+	}
+
+	/**
+	 * Dooray Wiki 페이지 목록을 VectorStore(PGvector)에 적재한다.
+	 */
+	@PostMapping("/wiki")
+	public ResponseEntity<?> ingestWiki(@RequestBody RagWikiIngestRequest request) {
+		try {
+			return ResponseEntity.ok(wikiIngestionService.ingest(request));
+		} catch (IllegalArgumentException e) {
+			String message = (e.getMessage() == null || e.getMessage().isBlank())
+					? "잘못된 요청입니다."
+					: e.getMessage();
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ApiErrorResponse(message));
+		} catch (Exception e) {
+			String message = (e.getMessage() == null || e.getMessage().isBlank())
+					? "Wiki 적재 중 오류가 발생했습니다."
 					: e.getMessage();
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiErrorResponse(message));
 		}

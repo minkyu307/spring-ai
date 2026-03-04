@@ -132,13 +132,26 @@ public class DoorayWikiApiController {
     }
 
     /**
+     * 특정 위키 페이지 단건 상세 조회 (본문 포함).
+     */
+    @GetMapping("/wikis/{wikiId}/pages/{pageId}")
+    public ResponseEntity<Map<String, Object>> getPage(
+        @PathVariable String wikiId,
+        @PathVariable String pageId) {
+        String url = DOORAY_BASE + "/wiki/v1/wikis/" + wikiId + "/pages/" + pageId;
+        return restTemplate.exchange(url, HttpMethod.GET,
+            new HttpEntity<>(authHeaders()),
+            new ParameterizedTypeReference<Map<String, Object>>() {});
+    }
+
+    /**
      * 단일 parentPageId에 대한 페이지 목록 조회. 429 응답 시 RETRY_DELAY_MS 대기 후 재시도.
      */
     private List<Map<String, Object>> fetchPagesWithRetry(
         String wikiId, String parentId, HttpEntity<Void> entity) {
 
         String url = DOORAY_BASE + "/wiki/v1/wikis/" + wikiId
-            + "/pages?parentPageId=" + parentId + "&size=2000";
+            + "/pages?parentPageId=" + parentId;
 
         for (int attempt = 0; attempt <= MAX_RETRY; attempt++) {
             try {
