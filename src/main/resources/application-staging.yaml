@@ -1,0 +1,9 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://10.253.12.78:25434/spring_ai
+    username: spring_ai
+    password: inno1234!
+
+logging:
+  file:
+    path: log  # 로그 파일 저장 경로 (프로젝트 루트 기준 log/ 폴더)
