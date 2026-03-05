@@ -1,0 +1,22 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Docker: Build & Push",
+            "type": "shell",
+            "command": "cmd",
+            "args": ["/c", "${workspaceFolder}\\scripts\\docker-build-push.cmd"],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": { "kind": "build", "isDefault": true },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "clear": true
+            }
+        }
+    ],
+    "inputs": []
+}

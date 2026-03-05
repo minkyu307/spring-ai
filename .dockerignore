@@ -1,0 +1,28 @@
+# 소스 및 리소스 (JAR에 이미 포함됨)
+src/
+docs/
+api_guide/
+
+# Git 및 IDE 설정
+.git/
+.gitignore
+.gitattributes
+.idea/
+.vscode/
+.cursor/
+
+# Maven 빌드 산출물 (COPY 대상 JAR 제외)
+target/
+!target/spring-ai-0.0.1-SNAPSHOT.jar
+
+# Maven Wrapper 소스
+.mvn/
+mvnw
+mvnw.cmd
+pom.xml
+
+# 기타
+*.md
+*.xml
+*.prettierrc
+log/

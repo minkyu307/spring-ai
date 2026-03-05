@@ -5,7 +5,7 @@ import minkyu307.spring_ai.entity.Role;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 /** app_role 테이블 접근. */
-public interface RoleRepository extends JpaRepository<Role, Long> {
+public interface RoleRepository extends JpaRepository<Role, String> {
 
 	Optional<Role> findByName(String name);
 }
