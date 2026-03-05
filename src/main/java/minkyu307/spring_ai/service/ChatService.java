@@ -37,7 +37,7 @@ public class ChatService {
         ChatConversationRepository chatConversationRepository) {
         QuestionAnswerAdvisor qaAdvisor = QuestionAnswerAdvisor.builder(vectorStore)
             .searchRequest(SearchRequest.builder()
-                .topK(8)
+                .topK(5)
                 .similarityThresholdAll()
                 .build())
             .build();
@@ -85,6 +85,19 @@ public class ChatService {
     }
 
     public record ChatResult(String conversationId, String response) {}
+
+    /**
+     * 현재 로그인 사용자 소유의 대화를 삭제한다. chat_conversation 및 spring_ai_chat_memory 메시지를 함께 제거.
+     * 타인 소유 대화는 삭제하지 않는다.
+     */
+    public void deleteConversation(String conversationId) {
+        String loginId = SecurityUtils.getCurrentLoginId();
+        chatConversationRepository.findByIdAndLoginId(conversationId, loginId)
+            .ifPresent(conv -> {
+                chatMemoryJdbcQueryRepository.deleteByConversationId(conversationId);
+                chatConversationRepository.delete(conv);
+            });
+    }
 
     /**
      * 현재 로그인 사용자의 채팅 히스토리 목록만 조회 (chat_conversation + spring_ai_chat_memory).

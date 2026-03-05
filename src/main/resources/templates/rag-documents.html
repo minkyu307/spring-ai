@@ -5,6 +5,8 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>RAG Documents - Spring AI</title>
         <link rel="stylesheet" th:href="@{/webjars/font-awesome/css/all.min.css}" />
+        <!-- marked.js: Markdown → HTML 렌더링 -->
+        <script th:src="@{/webjars/marked/marked.min.js}"></script>
         <style>
             * {
                 margin: 0;
@@ -386,14 +388,85 @@
                 padding-bottom: 8px;
                 border-bottom: 1px solid #e8eaed;
             }
+            /* 마크다운 렌더링 영역 */
             .wiki-preview-content {
                 font-size: 0.9em;
                 color: #3c4043;
                 line-height: 1.7;
-                white-space: pre-wrap;
                 word-break: break-word;
                 font-family: 'Google Sans', 'Roboto', sans-serif;
             }
+            .wiki-preview-content h1,
+            .wiki-preview-content h2,
+            .wiki-preview-content h3,
+            .wiki-preview-content h4,
+            .wiki-preview-content h5,
+            .wiki-preview-content h6 {
+                margin: 1em 0 0.4em;
+                font-weight: 700;
+                color: #202124;
+                line-height: 1.3;
+            }
+            .wiki-preview-content h1 { font-size: 1.5em; border-bottom: 1px solid #e8eaed; padding-bottom: 0.2em; }
+            .wiki-preview-content h2 { font-size: 1.25em; border-bottom: 1px solid #e8eaed; padding-bottom: 0.2em; }
+            .wiki-preview-content h3 { font-size: 1.1em; }
+            .wiki-preview-content p  { margin: 0.6em 0; }
+            .wiki-preview-content ul,
+            .wiki-preview-content ol {
+                margin: 0.5em 0 0.5em 1.4em;
+                padding: 0;
+            }
+            .wiki-preview-content li { margin: 0.25em 0; }
+            .wiki-preview-content blockquote {
+                margin: 0.6em 0;
+                padding: 0.4em 0.8em;
+                border-left: 3px solid #dadce0;
+                color: #5f6368;
+                background: #f8f9fa;
+                border-radius: 0 4px 4px 0;
+            }
+            .wiki-preview-content code {
+                font-family: 'Roboto Mono', 'Consolas', monospace;
+                font-size: 0.88em;
+                background: #f1f3f4;
+                padding: 0.15em 0.4em;
+                border-radius: 4px;
+                color: #c0392b;
+            }
+            .wiki-preview-content pre {
+                background: #f1f3f4;
+                border-radius: 6px;
+                padding: 12px 14px;
+                overflow-x: auto;
+                margin: 0.6em 0;
+            }
+            .wiki-preview-content pre code {
+                background: none;
+                padding: 0;
+                color: #202124;
+                font-size: 0.9em;
+            }
+            .wiki-preview-content table {
+                border-collapse: collapse;
+                width: 100%;
+                margin: 0.6em 0;
+                font-size: 0.9em;
+            }
+            .wiki-preview-content th,
+            .wiki-preview-content td {
+                border: 1px solid #dadce0;
+                padding: 6px 10px;
+                text-align: left;
+            }
+            .wiki-preview-content th { background: #f8f9fa; font-weight: 600; }
+            .wiki-preview-content a  { color: #1967d2; text-decoration: none; }
+            .wiki-preview-content a:hover { text-decoration: underline; }
+            .wiki-preview-content hr {
+                border: none;
+                border-top: 1px solid #e8eaed;
+                margin: 1em 0;
+            }
+            .wiki-preview-content img { max-width: 100%; border-radius: 4px; }
             .wiki-preview-loading {
                 display: flex;
                 align-items: center;
@@ -814,6 +887,7 @@
                             </tbody>
                         </table>
                     </div>
+                    <div class="status" id="docStatus"></div>
                 </div>
             </main>
         </div>
@@ -867,7 +941,8 @@
         </div>
 
         <script>
-            const statusEl = document.getElementById('status');
+            const statusEl    = document.getElementById('status');
+            const docStatusEl = document.getElementById('docStatus');
             const tbody = document.getElementById('docTbody');
             const uploadBtn = document.getElementById('uploadBtn');
             const openUrlDialogBtn = document.getElementById('openUrlDialogBtn');
@@ -878,8 +953,16 @@
             const cancelUrlBtn = document.getElementById('cancelUrlBtn');
             const ingestUrlBtn = document.getElementById('ingestUrlBtn');
 
+            /** 사이드바 파일 업로드 카드 상태 메시지 */
             function setStatus(text) {
                 statusEl.textContent = text || '';
+            }
+
+            /** 문서 목록 테이블 하단 상태 메시지 */
+            function setDocStatus(text, type) {
+                docStatusEl.textContent = text || '';
+                docStatusEl.style.color = type === 'error' ? '#d93025'
+                    : type === 'success' ? '#188038' : '#5f6368';
             }
 
             async function loadDocs() {
@@ -1061,10 +1144,10 @@
                         const t = await res.text();
                         throw new Error(`삭제 실패 (${res.status}): ${t || res.statusText}`);
                     }
-                    setStatus('삭제 완료');
+                    setDocStatus('삭제 완료', 'success');
                     await loadDocs();
                 } catch (e) {
-                    setStatus(`삭제 실패: ${e.message}`);
+                    setDocStatus(`삭제 실패: ${e.message}`, 'error');
                 }
             }
 
@@ -1239,6 +1322,18 @@
                 cb.addEventListener('change', () => onCbChange(cb, node));
             }
 
+            /**
+             * Rate Limit 공통 유틸: X-RateLimit-Remaining ≤ 1 이면 보충 시간만큼 대기.
+             * 트리 구성 및 미리보기 API 호출 전후에 공통으로 사용.
+             * @param {Response} res - fetch 응답 객체
+             */
+            async function waitIfRateLimited(res) {
+                const remaining = parseInt(res.headers.get('X-RateLimit-Remaining')      ?? '99', 10);
+                const replenish = parseInt(res.headers.get('X-RateLimit-Replenish-Rate') ?? '10', 10);
+                if (remaining <= 1 && replenish > 0) {
+                    await new Promise(r => setTimeout(r, Math.ceil(1000 / replenish)));
+                }
+            }
 
             /** 위키 목록 로드 후 트리 렌더링 */
             async function loadWikiTree() {
@@ -1246,6 +1341,7 @@
                 updateSelectedCount();
                 try {
                     const res = await fetch('/api/dooray/wiki/wikis?size=100');
+                    await waitIfRateLimited(res);
                     if (!res.ok) throw new Error(`위키 목록 조회 실패 (${res.status})`);
                     const data = await res.json();
                     const wikis = data.result || [];
@@ -1316,6 +1412,7 @@
                     const url = `/api/dooray/wiki/wikis/${wikiId}/pages`
                         + (parentPageId ? `?parentPageId=${parentPageId}` : '');
                     const res = await fetch(url);
+                    await waitIfRateLimited(res);
                     if (!res.ok) throw new Error(`페이지 조회 실패 (${res.status})`);
                     const data = await res.json();
                     const pages = data.result || [];
@@ -1387,6 +1484,7 @@
                         toggle.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
                         try {
                             const res = await fetch(`/api/dooray/wiki/wikis/${wikiId}/pages/${page.id}/subtree`);
+                            await waitIfRateLimited(res);
                             if (!res.ok) throw new Error(`하위 트리 조회 실패 (${res.status})`);
                             const data = await res.json();
                             const allPages = data.result || [];
@@ -1541,14 +1639,6 @@
 
             wikiPreviewCloseBtn.addEventListener('click', closeWikiPreview);
             wikiPreviewCancelBtn.addEventListener('click', closeWikiPreview);
-            wikiPreviewBackdrop.addEventListener('click', (e) => {
-                if (e.target === wikiPreviewBackdrop) closeWikiPreview();
-            });
-            window.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape' && wikiPreviewBackdrop.classList.contains('open')) {
-                    closeWikiPreview();
-                }
-            });
 
             /** Vector DB 적재 실행 */
             wikiIngestBtn.addEventListener('click', async () => {
@@ -1592,39 +1682,69 @@
 
             /**
              * 선택된 체크박스 노드에서 { wikiId, pageId, label } 목록 수집.
-             * 상위 노드가 이미 선택된 경우 하위 중복 제거(최상위 선택 우선).
+             * 상위 노드가 선택된 경우 subtree API로 하위 페이지를 모두 확장하여 반환.
+             * @returns {Promise<Array<{wikiId, pageId, label}>>}
              */
-            function collectSelectedPages() {
+            async function collectSelectedPages() {
                 const checked = [...wikiTreeWrap.querySelectorAll('input.tree-cb:checked')];
                 const result = [];
                 const seenPageIds = new Set();
 
+                // 이미 DOM에 렌더링된 cb 중 최상위(조상 cb가 checked인 것 제외)만 추출
+                const topNodes = [];
                 checked.forEach(cb => {
                     const node = cb.closest('.tree-node');
                     if (!node) return;
                     const pageId = node.dataset.pageId;
-                    if (!pageId || seenPageIds.has(pageId)) return;
+                    if (!pageId) return;
 
-                    // 상위 노드 중 이미 선택된 pageId가 있으면 스킵(중복 방지)
+                    // 조상 .tree-node 중 checked cb가 있으면 하위 중복이므로 스킵
                     let ancestor = node.parentElement?.closest('.tree-node');
-                    let dominated = false;
                     while (ancestor) {
-                        if (seenPageIds.has(ancestor.dataset.pageId)) {
-                            dominated = true;
-                            break;
-                        }
+                        const aCb = ancestor.querySelector(':scope > .tree-row input.tree-cb');
+                        if (aCb && aCb.checked) return;
                         ancestor = ancestor.parentElement?.closest('.tree-node');
                     }
-                    if (dominated) return;
+                    topNodes.push(node);
+                });
 
-                    // wikiId는 가장 가까운 조상 [data-wiki-id] 노드에서 추출
+                // 각 최상위 선택 노드에 대해 subtree 확장
+                await Promise.all(topNodes.map(async node => {
+                    const pageId = node.dataset.pageId;
                     const wikiNode = node.closest('[data-wiki-id]');
                     const wikiId = wikiNode ? wikiNode.dataset.wikiId : null;
                     const label = node.querySelector('.tree-label')?.textContent?.trim() || pageId;
 
+                    if (seenPageIds.has(pageId)) return;
                     seenPageIds.add(pageId);
+
+                    // 선택된 노드 자신을 먼저 추가
                     result.push({ wikiId, pageId, label });
-                });
+
+                    // subtree API로 하위 페이지 전체 수집
+                    if (!wikiId) return;
+                    try {
+                        const res = await fetch(`/api/dooray/wiki/wikis/${encodeURIComponent(wikiId)}/pages/${encodeURIComponent(pageId)}/subtree`);
+                        await waitIfRateLimited(res);
+                        if (!res.ok) return;
+                        const data = await res.json();
+                        const allPages = data.result || [];
+                        // BFS 순서(parentPageId 기준 트리 순회)로 추가
+                        const queue = [pageId];
+                        while (queue.length > 0) {
+                            const parentId = queue.shift();
+                            allPages
+                                .filter(p => String(p.parentPageId) === String(parentId))
+                                .forEach(p => {
+                                    if (seenPageIds.has(p.id)) return;
+                                    seenPageIds.add(p.id);
+                                    result.push({ wikiId, pageId: p.id, label: p.subject || p.id });
+                                    queue.push(p.id);
+                                });
+                        }
+                    } catch (_) { /* subtree 조회 실패 시 상위 페이지만 포함 */ }
+                }));
+
                 return result;
             }
 
@@ -1658,8 +1778,11 @@
                 // 공식 API 문서 기준: body.mimeType은 항상 text/x-markdown
                 const rawContent = body.content || '(본문 없음)';
 
-                // 마크다운을 간단히 HTML로 변환 (헤더, 굵게, 코드블록, 줄바꿈)
-                const contentHtml = `<div class="wiki-preview-content" style="white-space:pre-wrap">${escapeHtml(rawContent)}</div>`;
+                // marked.js로 마크다운 → HTML 변환 (GFM + 줄바꿈 활성화)
+                const mdHtml = typeof marked !== 'undefined'
+                    ? marked.parse(rawContent, { gfm: true, breaks: true })
+                    : `<pre style="white-space:pre-wrap">${escapeHtml(rawContent)}</pre>`;
+                const contentHtml = `<div class="wiki-preview-content">${mdHtml}</div>`;
 
                 const updatedAt = result.updatedAt ? new Date(result.updatedAt).toLocaleString('ko-KR') : '';
                 const metaHtml = updatedAt
@@ -1674,7 +1797,15 @@
 
             /** 선택 항목 업로드 버튼 클릭 → 미리보기 다이얼로그 열기 */
             async function openWikiPreview() {
-                const pages = collectSelectedPages();
+                wikiUploadBtn.disabled = true;
+                setWikiUploadStatus('하위 페이지 수집 중...', '');
+
+                // subtree 확장이 포함되므로 await 필요
+                const pages = await collectSelectedPages();
+
+                wikiUploadBtn.disabled = false;
+                setWikiUploadStatus('');
+
                 if (pages.length === 0) {
                     setWikiUploadStatus('선택된 항목이 없습니다.', 'error');
                     return;
@@ -1711,24 +1842,38 @@
                 // 첫 탭 로딩 상태 표시
                 renderPreviewContent(pages[0], contents[0]);
 
-                // 모든 페이지 병렬 조회
-                await Promise.all(pages.map(async (page, idx) => {
-                    try {
-                        if (!page.wikiId || !page.pageId) throw new Error('wikiId 또는 pageId를 찾을 수 없습니다.');
-                        const res = await fetch(`/api/dooray/wiki/wikis/${encodeURIComponent(page.wikiId)}/pages/${encodeURIComponent(page.pageId)}`);
-                        if (!res.ok) {
-                            const msg = await readErrorMessage(res);
-                            throw new Error(`조회 실패 (${res.status}): ${msg || res.statusText}`);
+                // Rate Limit 대응: 동시 요청 수 제한 + 헤더 기반 적응형 딜레이
+                const CONCURRENCY = 3;    // 동시 최대 요청 수
+                const MIN_DELAY_MS = 200; // 청크 간 최소 간격(ms)
+
+                // 순차 청크 처리: CONCURRENCY 단위로 묶어 병렬 실행, 청크 간 MIN_DELAY_MS 대기
+                for (let i = 0; i < pages.length; i += CONCURRENCY) {
+                    const chunk = pages.slice(i, i + CONCURRENCY);
+                    await Promise.all(chunk.map(async (page, ci) => {
+                        const idx = i + ci;
+                        try {
+                            if (!page.wikiId || !page.pageId) throw new Error('wikiId 또는 pageId를 찾을 수 없습니다.');
+                            const res = await fetch(`/api/dooray/wiki/wikis/${encodeURIComponent(page.wikiId)}/pages/${encodeURIComponent(page.pageId)}`);
+                            await waitIfRateLimited(res);
+                            if (!res.ok) {
+                                const msg = await readErrorMessage(res);
+                                throw new Error(`조회 실패 (${res.status}): ${msg || res.statusText}`);
+                            }
+                            contents[idx] = { loading: false, error: null, data: await res.json() };
+                        } catch (e) {
+                            contents[idx] = { loading: false, error: e.message, data: null };
                         }
-                        contents[idx] = { loading: false, error: null, data: await res.json() };
-                    } catch (e) {
-                        contents[idx] = { loading: false, error: e.message, data: null };
+                        // 현재 활성 탭이면 즉시 갱신
+                        if (idx === activeTab) {
+                            renderPreviewContent(pages[idx], contents[idx]);
+                        }
+                    }));
+
+                    // 청크 간 최소 간격 (마지막 청크 이후는 불필요)
+                    if (i + CONCURRENCY < pages.length) {
+                        await new Promise(r => setTimeout(r, MIN_DELAY_MS));
                     }
-                    // 현재 활성 탭이면 즉시 갱신
-                    if (idx === activeTab) {
-                        renderPreviewContent(pages[idx], contents[idx]);
-                    }
-                }));
+                }
 
                 // 모두 로드 완료 후 현재 탭 재렌더링
                 renderPreviewContent(pages[activeTab], contents[activeTab]);

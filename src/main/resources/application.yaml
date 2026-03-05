@@ -11,9 +11,9 @@ spring:
             client-secret: ${GOOGLE_CLIENT_SECRET}
             scope: openid, profile, email
   datasource:
-    url: jdbc:postgresql://localhost:25432/spring_ai
-    username: postgres
-    password: postgres
+    url: jdbc:postgresql://10.253.12.78:25434/spring_ai
+    username: spring_ai
+    password: inno1234!
     driver-class-name: org.postgresql.Driver
   ai:
     google:
@@ -29,8 +29,9 @@ spring:
               dimensions: 768
         chat:
           options:
-            model: gemini-2.5-flash
-            temperature: 0.7
+            model: gemini-3.1-flash-lite-preview
+            temperature: 0.2
+            top-k: 15
     model:
       embedding:
         text: google-genai

@@ -87,4 +87,19 @@ public class ChatApiController {
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiErrorResponse(msg));
 		}
 	}
+
+	/**
+	 * 특정 대화 삭제 (chat_conversation + spring_ai_chat_memory 메시지 함께 제거)
+	 */
+	@DeleteMapping("/histories/{conversationId}")
+	public ResponseEntity<?> deleteHistory(@PathVariable String conversationId) {
+		try {
+			chatService.deleteConversation(conversationId);
+			return ResponseEntity.noContent().build();
+		} catch (Exception e) {
+			log.error("Error deleting history", e);
+			String msg = (e.getMessage() != null && !e.getMessage().isBlank()) ? e.getMessage() : "대화 삭제 중 오류가 발생했습니다.";
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiErrorResponse(msg));
+		}
+	}
 }

@@ -106,6 +106,12 @@
             <groupId>org.webjars</groupId>
             <artifactId>webjars-locator-lite</artifactId>
         </dependency>
+        <!-- Markdown → HTML 렌더링 (미리보기 다이얼로그) -->
+        <dependency>
+            <groupId>org.webjars.npm</groupId>
+            <artifactId>marked</artifactId>
+            <version>15.0.12</version>
+        </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -153,6 +153,16 @@ public class ChatMemoryJdbcQueryRepository {
 	}
 
 	/**
+	 * 특정 conversation_id의 모든 메시지를 spring_ai_chat_memory에서 삭제한다.
+	 */
+	public void deleteByConversationId(String conversationId) {
+		jdbcTemplate.update(
+			"DELETE FROM spring_ai_chat_memory WHERE conversation_id = ?",
+			conversationId
+		);
+	}
+
+	/**
 	 * 히스토리 목록 요약 DTO. // Service에서 제목 트렁케이션 등 UI용 가공 수행
 	 */
 	public record ChatHistorySummary(
