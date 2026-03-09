@@ -13,4 +13,4 @@ spring:
 
 logging:
   file:
-    path: log  # 로그 파일 저장 경로 (프로젝트 루트 기준 log/ 폴더)
+    path: log  # 로그 파일 저장 경로 (프로젝트 루트 기준 log/ 폴더

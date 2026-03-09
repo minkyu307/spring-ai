@@ -31,3 +31,6 @@ build/
 
 ### Logs ###
 log/
+
+### Local / secrets (SSL cert·key) ###
+src/main/resources/ssl/

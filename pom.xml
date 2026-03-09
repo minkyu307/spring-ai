@@ -112,6 +112,12 @@
             <artifactId>marked</artifactId>
             <version>15.0.12</version>
         </dependency>
+        <!-- DOMPurify: XSS 방지 (오프라인용 webjar) -->
+        <dependency>
+            <groupId>org.webjars.npm</groupId>
+            <artifactId>dompurify</artifactId>
+            <version>2.5.8</version>
+        </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>DocuSearch</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+            body {
+                font-family: 'Google Sans', 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+                background: #f8f9fa;
+                height: 100vh;
+                min-height: 100vh;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+            }
+            .header {
+                flex-shrink: 0;
+                height: 45px;
+                min-height: 45px;
+                background: #fff3e0;
+                border-bottom: 1px solid #bdc1c6;
+                padding: 0 16px;
+                display: flex;
+                align-items: center;
+                gap: 16px;
+            }
+            .header-title {
+                color: #202124;
+                font-size: 1.2em;
+                font-weight: 400;
+            }
+            .header-actions {
+                margin-left: auto;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .app-nav {
+                flex-shrink: 0;
+                width: 72px;
+                background: #e8eaed;
+                border-right: 1px solid #bdc1c6;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: flex-start;
+                padding: 16px 0;
+                gap: 4px;
+            }
+            .app-nav-item {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 48px;
+                height: 48px;
+                min-height: 48px;
+                box-sizing: border-box;
+                border-radius: 50%;
+                color: #5f6368;
+                text-decoration: none;
+                transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+                background: transparent;
+            }
+            .app-nav-item:hover {
+                background: #f1f3f4;
+                color: #202124;
+            }
+            .app-nav-item.active {
+                background: #fff3e0;
+                color: #e65100;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+            }
+            .app-nav-item i {
+                font-size: 1.25rem;
+            }
+            .btn-logout {
+                padding: 6px 14px;
+                background: #5f6368;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                font-size: 0.875em;
+                font-weight: 500;
+                cursor: pointer;
+            }
+            .btn-logout:hover {
+                background: #4a4d52;
+            }
+            .main-layout {
+                flex: 1;
+                min-height: 0;
+                display: flex;
+                overflow: hidden;
+            }
+            .sidebar {
+                flex-shrink: 0;
+                width: 280px;
+                background: #f1f3f4;
+                border-right: 1px solid #bdc1c6;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+            }
+            .sidebar-header {
+                padding: 16px;
+                border-bottom: 1px solid #bdc1c6;
+            }
+            .write-post-btn {
+                width: 100%;
+                min-height: 40px;
+                padding: 8px 14px;
+                background: #e65100;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                font-size: 0.875em;
+                font-weight: 500;
+                line-height: 1.2;
+                cursor: pointer;
+                transition: background 0.2s;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 6px;
+            }
+            .write-post-btn:hover {
+                background: #bf360c;
+            }
+            .post-list {
+                flex: 1;
+                overflow-y: auto;
+                padding: 8px;
+            }
+            .empty-post-list {
+                text-align: center;
+                padding: 40px 20px;
+                color: #5f6368;
+                font-size: 0.9em;
+            }
+            .post-item {
+                padding: 12px;
+                border-radius: 8px;
+                cursor: pointer;
+                transition: background 0.2s;
+                margin-bottom: 4px;
+            }
+            .post-item:hover {
+                background: #e8eaed;
+            }
+            .post-item.active {
+                background: #fff3e0;
+            }
+            .post-title {
+                font-size: 0.9em;
+                color: #202124;
+                margin-bottom: 4px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .post-meta {
+                font-size: 0.75em;
+                color: #5f6368;
+            }
+            .board-main {
+                flex: 1;
+                min-height: 0;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+            }
+            .board-content {
+                flex: 1;
+                min-height: 0;
+                padding: 24px;
+                overflow-y: auto;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+            }
+            .board-content.showing-detail {
+                align-items: flex-start;
+                justify-content: flex-start;
+            }
+            .placeholder {
+                text-align: center;
+                padding: 80px 20px;
+                color: #5f6368;
+            }
+            .placeholder-icon {
+                font-size: 3.5em;
+                margin-bottom: 16px;
+                opacity: 0.4;
+                color: #5f6368;
+            }
+            .placeholder-text {
+                font-size: 1.1em;
+            }
+            .board-content .placeholder { flex: none; }
+            .post-detail {
+                width: 100%;
+                margin: 0;
+                padding: 0 8px;
+                text-align: left;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+            .post-detail-header {
+                background: #fff;
+                border: 1px solid #dadce0;
+                border-radius: 12px;
+                padding: 20px 24px;
+                flex-shrink: 0;
+            }
+            .post-detail-title {
+                font-size: 1.5em;
+                font-weight: 700;
+                color: #202124;
+                margin-bottom: 8px;
+                line-height: 1.3;
+            }
+            .post-detail-header-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+            .post-detail-meta {
+                font-size: 0.85em;
+                color: #5f6368;
+            }
+            .post-detail-actions { display: flex; align-items: center; gap: 8px; }
+            .post-edit-btn, .post-delete-btn {
+                padding: 6px 12px;
+                min-height: 32px;
+                font-size: 0.85em;
+                color: #5f6368;
+                background: #f1f3f4;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                box-sizing: border-box;
+            }
+            .post-edit-btn:hover { background: #ffe0b2; color: #e65100; }
+            .post-delete-btn:hover { background: #fce8e6; color: #d93025; }
+            .post-detail-body {
+                background: #fff;
+                border: 1px solid #dadce0;
+                border-radius: 12px;
+                padding: 20px 24px;
+                flex: 1;
+                min-height: 0;
+                margin-top: 10px;
+            }
+            /* rag-documents wiki-preview-dialog와 동일한 마크다운 스타일 */
+            .post-detail-content {
+                font-size: 0.95em;
+                color: #3c4043;
+                line-height: 1.7;
+                word-break: break-word;
+            }
+            .post-detail-content h1, .post-detail-content h2, .post-detail-content h3,
+            .post-detail-content h4, .post-detail-content h5, .post-detail-content h6 {
+                margin: 1em 0 0.4em;
+                font-weight: 700;
+                color: #202124;
+                line-height: 1.3;
+            }
+            .post-detail-content h1 { font-size: 1.5em; border-bottom: 1px solid #e8eaed; padding-bottom: 0.2em; }
+            .post-detail-content h2 { font-size: 1.25em; border-bottom: 1px solid #e8eaed; padding-bottom: 0.2em; }
+            .post-detail-content h3 { font-size: 1.1em; }
+            .post-detail-content p { margin: 0.6em 0; }
+            .post-detail-content ul, .post-detail-content ol { margin: 0.5em 0 0.5em 1.4em; padding: 0; }
+            .post-detail-content li { margin: 0.25em 0; }
+            .post-detail-content blockquote {
+                margin: 0.6em 0;
+                padding: 0.4em 0.8em;
+                border-left: 3px solid #dadce0;
+                color: #5f6368;
+                background: #f8f9fa;
+                border-radius: 0 4px 4px 0;
+            }
+            .post-detail-content code {
+                font-family: 'Roboto Mono', 'Consolas', monospace;
+                font-size: 0.88em;
+                background: #f1f3f4;
+                padding: 0.15em 0.4em;
+                border-radius: 4px;
+                color: #c0392b;
+            }
+            .post-detail-content pre {
+                background: #f1f3f4;
+                border-radius: 6px;
+                padding: 12px 14px;
+                overflow-x: auto;
+                margin: 0.6em 0;
+            }
+            .post-detail-content pre code { background: none; padding: 0; color: #202124; font-size: 0.9em; }
+            .post-detail-content table { border-collapse: collapse; width: 100%; margin: 0.6em 0; font-size: 0.9em; }
+            .post-detail-content th, .post-detail-content td { border: 1px solid #dadce0; padding: 6px 10px; text-align: left; }
+            .post-detail-content th { background: #f8f9fa; font-weight: 600; }
+            .post-detail-content a { color: #e65100; text-decoration: none; }
+            .post-detail-content a:hover { text-decoration: underline; }
+            .post-detail-content hr { border: none; border-top: 1px solid #e8eaed; margin: 1em 0; }
+            .post-detail-content img { max-width: 100%; border-radius: 4px; }
+            .post-detail-loading { color: #5f6368; padding: 24px 0; }
+            .post-detail-error { color: #d93025; font-size: 0.9em; padding: 12px 0; }
+            .comments-section {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                margin-top: 10px;
+            }
+            .comments-section-header {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-size: 1em;
+                color: #5f6368;
+            }
+            .comments-section-header i {
+                font-size: 1.1em;
+                color: #5f6368;
+            }
+            .comments-section-label {
+                font-weight: 500;
+                color: #202124;
+            }
+            .comments-section-count {
+                font-weight: 600;
+                color: #e65100;
+            }
+            .post-detail-comments {
+                background: #f8f9fa;
+                border: 1px solid #dadce0;
+                border-radius: 12px;
+                padding: 20px 24px;
+                flex-shrink: 0;
+            }
+            .comment-item {
+                padding: 12px 0;
+                border-bottom: 1px solid #f1f3f4;
+            }
+            .comment-item:last-child { border-bottom: none; }
+            .comment-meta {
+                display: flex;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 0;
+                font-size: 0.85em;
+                color: #5f6368;
+                margin-bottom: 6px;
+            }
+            .comment-edit-btn, .comment-delete-btn {
+                flex-shrink: 0;
+                padding: 4px 6px;
+                background: none;
+                border: none;
+                border-radius: 4px;
+                color: #9aa0a6;
+                font-size: 0.85em;
+                cursor: pointer;
+                line-height: 1;
+            }
+            .comment-edit-btn { margin-left: 8px; margin-right: 4px; }
+            .comment-edit-btn:hover { background: #ffe0b2; color: #e65100; }
+            .comment-delete-btn { margin-left: 0; }
+            .comment-delete-btn:hover { background: #fce8e6; color: #d93025; }
+            .comment-edit-wrap { margin-top: 8px; margin-bottom: 8px; }
+            .comment-edit-textarea {
+                width: 100%;
+                height: 80px;
+                padding: 10px 12px;
+                border: 1px solid #dadce0;
+                border-radius: 8px;
+                font-size: 0.95em;
+                font-family: inherit;
+                resize: none;
+                box-sizing: border-box;
+                margin-bottom: 8px;
+            }
+            .comment-edit-textarea:focus { outline: none; border-color: #e65100; }
+            .comment-edit-actions { display: flex; justify-content: flex-end; gap: 8px; }
+            .comment-edit-actions button { padding: 6px 14px; border-radius: 6px; font-size: 0.875em; font-weight: 500; cursor: pointer; border: none; }
+            .comment-edit-cancel { background: #f1f3f4; color: #202124; }
+            .comment-edit-cancel:hover { background: #e8eaed; }
+            .comment-edit-submit { background: #e65100; color: #fff; }
+            .comment-edit-submit:hover:not(:disabled) { background: #bf360c; }
+            .comment-edit-submit:disabled { background: #dadce0; cursor: not-allowed; }
+            .comment-edit-error { font-size: 0.85em; color: #d93025; margin-bottom: 8px; }
+            .comment-body {
+                font-size: 0.95em;
+                color: #3c4043;
+                line-height: 1.6;
+                word-break: break-word;
+            }
+            .comment-body h1, .comment-body h2, .comment-body h3,
+            .comment-body h4, .comment-body h5, .comment-body h6 { margin: 0.5em 0 0.3em; font-weight: 600; font-size: 1em; }
+            .comment-body p { margin: 0.4em 0; }
+            .comment-body ul, .comment-body ol { margin: 0.4em 0 0.4em 1.2em; padding: 0; }
+            .comment-body code { background: #f1f3f4; padding: 0.1em 0.3em; border-radius: 3px; font-size: 0.9em; }
+            .comment-body pre { background: #f1f3f4; padding: 8px; border-radius: 4px; overflow-x: auto; margin: 0.4em 0; font-size: 0.85em; }
+            .comment-body pre code { background: none; padding: 0; }
+            .comment-body a { color: #e65100; text-decoration: none; }
+            .comment-body a:hover { text-decoration: underline; }
+            .comments-empty { font-size: 0.9em; color: #9aa0a6; padding: 12px 0; }
+            .comment-write {
+                margin-top: 12px;
+                padding-top: 16px;
+                border-top: 1px solid #dadce0;
+            }
+            .comment-write-textarea {
+                width: 100%;
+                height: 80px;
+                padding: 12px 14px;
+                border: 1px solid #dadce0;
+                border-radius: 8px;
+                font-size: 0.95em;
+                font-family: inherit;
+                resize: none;
+                box-sizing: border-box;
+            }
+            .comment-write-textarea:focus {
+                outline: none;
+                border-color: #e65100;
+            }
+            .comment-write-actions {
+                margin-top: 10px;
+                display: flex;
+                justify-content: flex-end;
+            }
+            .comment-write-btn {
+                padding: 8px 18px;
+                background: #e65100;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                font-size: 0.875em;
+                font-weight: 500;
+                cursor: pointer;
+            }
+            .comment-write-btn:hover:not(:disabled) { background: #bf360c; }
+            .comment-write-btn:disabled { background: #dadce0; cursor: not-allowed; }
+            .comment-write-error { font-size: 0.85em; color: #d93025; margin-top: 6px; }
+            .comment-delete-backdrop {
+                position: fixed;
+                inset: 0;
+                background: rgba(0,0,0,0.4);
+                display: none;
+                align-items: center;
+                justify-content: center;
+                z-index: 2000;
+            }
+            .comment-delete-backdrop.open { display: flex; }
+            .comment-delete-dialog {
+                background: #fff;
+                border-radius: 12px;
+                padding: 20px 24px;
+                min-width: 280px;
+                max-width: 90vw;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+                border: 1px solid #dadce0;
+            }
+            .comment-delete-dialog-title {
+                font-size: 1.1em;
+                font-weight: 600;
+                color: #202124;
+                margin-bottom: 8px;
+            }
+            .comment-delete-dialog-message {
+                font-size: 0.95em;
+                color: #5f6368;
+                margin-bottom: 20px;
+            }
+            .comment-delete-dialog-actions {
+                display: flex;
+                justify-content: flex-end;
+                gap: 8px;
+            }
+            .comment-delete-dialog-actions button {
+                padding: 8px 16px;
+                border-radius: 6px;
+                font-size: 0.875em;
+                font-weight: 500;
+                cursor: pointer;
+                border: none;
+            }
+            .comment-delete-dialog-cancel {
+                background: #f1f3f4;
+                color: #202124;
+            }
+            .comment-delete-dialog-cancel:hover { background: #e8eaed; }
+            .comment-delete-dialog-confirm {
+                background: #d93025;
+                color: #fff;
+            }
+            .comment-delete-dialog-confirm:hover:not(:disabled) { background: #b71c1c; }
+            .comment-delete-dialog-confirm:disabled { opacity: 0.6; cursor: not-allowed; }
+            .post-delete-backdrop {
+                position: fixed;
+                inset: 0;
+                background: rgba(0,0,0,0.4);
+                display: none;
+                align-items: center;
+                justify-content: center;
+                z-index: 2000;
+            }
+            .post-delete-backdrop.open { display: flex; }
+            .post-delete-dialog {
+                background: #fff;
+                border-radius: 12px;
+                padding: 20px 24px;
+                min-width: 280px;
+                max-width: 90vw;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+                border: 1px solid #dadce0;
+            }
+            .post-delete-dialog-title { font-size: 1.1em; font-weight: 600; color: #202124; margin-bottom: 8px; }
+            .post-delete-dialog-message { font-size: 0.95em; color: #5f6368; margin-bottom: 20px; }
+            .post-delete-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; }
+            .post-delete-dialog-actions button { padding: 8px 16px; border-radius: 6px; font-size: 0.875em; font-weight: 500; cursor: pointer; border: none; }
+            .post-delete-dialog-cancel { background: #f1f3f4; color: #202124; }
+            .post-delete-dialog-cancel:hover { background: #e8eaed; }
+            .post-delete-dialog-confirm { background: #d93025; color: #fff; }
+            .post-delete-dialog-confirm:hover:not(:disabled) { background: #b71c1c; }
+            .post-delete-dialog-confirm:disabled { opacity: 0.6; cursor: not-allowed; }
+            .write-post-backdrop {
+                position: fixed;
+                inset: 0;
+                background: rgba(0,0,0,0.4);
+                display: none;
+                align-items: center;
+                justify-content: center;
+                z-index: 2000;
+                padding: 16px;
+            }
+            .write-post-backdrop.open { display: flex; }
+            .write-post-dialog {
+                background: #fff;
+                border-radius: 12px;
+                padding: 20px 24px;
+                width: 100%;
+                max-width: 800px;
+                max-height: 90vh;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+                border: 1px solid #dadce0;
+            }
+            .write-post-dialog-title { font-size: 1.2em; font-weight: 600; color: #202124; margin-bottom: 16px; }
+            .write-post-dialog label { display: block; font-size: 0.9em; color: #5f6368; margin-bottom: 6px; }
+            .write-post-dialog input[type="text"] {
+                width: 100%;
+                padding: 10px 12px;
+                border: 1px solid #dadce0;
+                border-radius: 8px;
+                font-size: 1em;
+                margin-bottom: 12px;
+                box-sizing: border-box;
+            }
+            .write-post-dialog input[type="text"]:focus { outline: none; border-color: #e65100; }
+            .write-post-tabs { display: flex; gap: 0; margin-bottom: 8px; border-bottom: 1px solid #dadce0; }
+            .write-post-tab {
+                padding: 8px 16px; font-size: 0.9em; font-weight: 500; color: #5f6368; background: none; border: none; border-bottom: 2px solid transparent;
+                margin-bottom: -1px; cursor: pointer;
+            }
+            .write-post-tab:hover { color: #202124; }
+            .write-post-tab.active { color: #e65100; border-bottom-color: #e65100; }
+            .write-post-body-wrap { position: relative; margin-bottom: 16px; }
+            .write-post-body-textarea {
+                width: 100%;
+                height: 280px;
+                padding: 12px 14px;
+                border: 1px solid #dadce0;
+                border-radius: 8px;
+                font-size: 0.95em;
+                font-family: inherit;
+                resize: none;
+                box-sizing: border-box;
+            }
+            .write-post-body-textarea:focus { outline: none; border-color: #e65100; }
+            .write-post-preview {
+                display: none;
+                width: 100%;
+                height: 280px;
+                padding: 12px 14px;
+                border: 1px solid #dadce0;
+                border-radius: 8px;
+                overflow: auto;
+                font-size: 0.95em;
+                line-height: 1.5;
+                box-sizing: border-box;
+                background: #fff;
+            }
+            .write-post-preview.active { display: block; }
+            .write-post-body-textarea.hide-for-preview { display: none; }
+            .write-post-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; flex-shrink: 0; }
+            .write-post-dialog-actions button { padding: 8px 18px; border-radius: 6px; font-size: 0.875em; font-weight: 500; cursor: pointer; border: none; }
+            .write-post-dialog-cancel { background: #f1f3f4; color: #202124; }
+            .write-post-dialog-cancel:hover { background: #e8eaed; }
+            .write-post-dialog-submit { background: #e65100; color: #fff; }
+            .write-post-dialog-submit:hover:not(:disabled) { background: #bf360c; }
+            .write-post-dialog-submit:disabled { background: #dadce0; cursor: not-allowed; }
+            .write-post-dialog-error { font-size: 0.85em; color: #d93025; margin-bottom: 8px; }
+            @media (max-width: 768px) {
+                .sidebar {
+                    position: fixed;
+                    left: -280px;
+                    top: 0;
+                    bottom: 0;
+                    z-index: 1000;
+                    transition: left 0.3s;
+                }
+                .sidebar.open {
+                    left: 72px;
+                }
+            }
+        </style>
+    </head>
+    <body th:attr="data-login-id=${loginId}">
+        <div class="header">
+            <div class="header-title">Board</div>
+            <div class="header-actions">
+                <form th:action="@{/logout}" method="post">
+                    <button type="submit" class="btn-logout">로그아웃</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="main-layout">
+            <nav class="app-nav" aria-label="앱 메뉴">
+                <a href="/chat" class="app-nav-item" title="채팅"><i class="fa-regular fa-comments"></i></a>
+                <a href="/rag/documents" class="app-nav-item" title="문서 관리"><i class="fa-solid fa-cloud"></i></a>
+                <a href="/board" class="app-nav-item active" title="게시판"><i class="fa-solid fa-clipboard-list"></i></a>
+            </nav>
+            <aside class="sidebar" id="sidebar" aria-label="글 목록">
+                <div class="sidebar-header">
+                    <button type="button" class="write-post-btn" id="writePostBtn">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                        <span>글쓰기</span>
+                    </button>
+                </div>
+                <div class="post-list" id="postList">
+                    <div class="empty-post-list">등록된 글이 없습니다.</div>
+                </div>
+            </aside>
+
+            <main class="board-main">
+                <div class="board-content" id="boardContent">
+                    <div class="placeholder" id="placeholder">
+                        <div class="placeholder-icon"><i class="fa-solid fa-clipboard-list"></i></div>
+                        <div class="placeholder-text">
+                            글 목록에서 글을 선택하거나 글쓰기를 눌러 새 글을 작성하세요
+                        </div>
+                    </div>
+                    <div class="post-detail" id="postDetail" style="display: none;">
+                        <header class="post-detail-header">
+                            <h1 class="post-detail-title" id="postDetailTitle"></h1>
+                            <div class="post-detail-header-row">
+                                <div class="post-detail-meta" id="postDetailMeta"></div>
+                                <div class="post-detail-actions" id="postDetailActions"></div>
+                            </div>
+                        </header>
+                        <section class="post-detail-body">
+                            <div class="post-detail-content" id="postDetailContent"></div>
+                        </section>
+                        <div class="comments-section">
+                            <div class="comments-section-header">
+                                <i class="fa-regular fa-comments"></i>
+                                <span class="comments-section-label">댓글</span>
+                                <span class="comments-section-count" id="commentCount">0</span>
+                            </div>
+                            <section class="post-detail-comments" id="postDetailComments"></section>
+                            <div class="comment-write" id="commentWrite" style="display: none;">
+                                <textarea class="comment-write-textarea" id="commentInput" placeholder="댓글을 입력하세요."></textarea>
+                                <div class="comment-write-error" id="commentWriteError"></div>
+                                <div class="comment-write-actions">
+                                    <button type="button" class="comment-write-btn" id="commentSubmitBtn">댓글 작성</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <div class="comment-delete-backdrop" id="commentDeleteBackdrop" aria-hidden="true">
+            <div class="comment-delete-dialog" role="dialog" aria-labelledby="commentDeleteTitle" aria-modal="true">
+                <div class="comment-delete-dialog-title" id="commentDeleteTitle">댓글 삭제</div>
+                <div class="comment-delete-dialog-message">이 댓글을 삭제할까요?</div>
+                <div class="comment-delete-dialog-actions">
+                    <button type="button" class="comment-delete-dialog-cancel" id="commentDeleteCancelBtn">취소</button>
+                    <button type="button" class="comment-delete-dialog-confirm" id="commentDeleteConfirmBtn">삭제</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="post-delete-backdrop" id="postDeleteBackdrop" aria-hidden="true">
+            <div class="post-delete-dialog" role="dialog" aria-labelledby="postDeleteTitle" aria-modal="true">
+                <div class="post-delete-dialog-title" id="postDeleteTitle">글 삭제</div>
+                <div class="post-delete-dialog-message">이 글을 삭제할까요? 댓글도 함께 삭제됩니다.</div>
+                <div class="post-delete-dialog-actions">
+                    <button type="button" class="post-delete-dialog-cancel" id="postDeleteCancelBtn">취소</button>
+                    <button type="button" class="post-delete-dialog-confirm" id="postDeleteConfirmBtn">삭제</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="write-post-backdrop" id="writePostBackdrop" aria-hidden="true">
+            <div class="write-post-dialog" role="dialog" aria-labelledby="writePostDialogTitle" aria-modal="true">
+                <div class="write-post-dialog-title" id="writePostDialogTitle">글쓰기</div>
+                <div class="write-post-dialog-error" id="writePostError"></div>
+                <label for="writePostTitleInput">제목</label>
+                <input type="text" id="writePostTitleInput" placeholder="제목을 입력하세요" maxlength="200" />
+                <label for="writePostBodyInput">본문</label>
+                <div class="write-post-tabs" role="tablist">
+                    <button type="button" class="write-post-tab active" role="tab" id="writePostTabWrite" aria-selected="true" data-tab="write">Write</button>
+                    <button type="button" class="write-post-tab" role="tab" id="writePostTabPreview" aria-selected="false" data-tab="preview">Preview</button>
+                </div>
+                <div class="write-post-body-wrap">
+                    <textarea id="writePostBodyInput" class="write-post-body-textarea" placeholder="[markdown 문법 사용]"></textarea>
+                    <div id="writePostPreview" class="write-post-preview post-detail-content" role="tabpanel" aria-labelledby="writePostTabPreview"></div>
+                </div>
+                <div class="write-post-dialog-actions">
+                    <button type="button" class="write-post-dialog-cancel" id="writePostCancelBtn">취소</button>
+                    <button type="button" class="write-post-dialog-submit" id="writePostSubmitBtn">등록</button>
+                </div>
+            </div>
+        </div>
+
+        <link rel="stylesheet" th:href="@{/webjars/font-awesome/css/all.min.css}" />
+        <!-- 마크다운 렌더링: marked + DOMPurify (webjar) -->
+        <script th:src="@{/webjars/marked/marked.min.js}"></script>
+        <script th:src="@{/webjars/dompurify/2.5.8/dist/purify.min.js}"></script>
+        <script>
+            const postListEl = document.getElementById('postList');
+            const writePostBtn = document.getElementById('writePostBtn');
+            const placeholder = document.getElementById('placeholder');
+            const postDetail = document.getElementById('postDetail');
+            const boardContent = document.getElementById('boardContent');
+            const postDetailTitle = document.getElementById('postDetailTitle');
+            const postDetailMeta = document.getElementById('postDetailMeta');
+            const postDetailActions = document.getElementById('postDetailActions');
+            const postDetailContent = document.getElementById('postDetailContent');
+            const postDetailComments = document.getElementById('postDetailComments');
+            const commentCountEl = document.getElementById('commentCount');
+            const commentWrite = document.getElementById('commentWrite');
+            const commentInput = document.getElementById('commentInput');
+            const commentSubmitBtn = document.getElementById('commentSubmitBtn');
+            const commentWriteError = document.getElementById('commentWriteError');
+            var currentPostId = null;
+            var currentLoginId = (document.body.getAttribute('data-login-id') || '').trim();
+            var pendingCommentIdToDelete = null;
+
+            /** 날짜 포맷 (예: 2025. 3. 9. 오후 2:30) */
+            function formatDate(isoString) {
+                if (!isoString) return '';
+                const d = new Date(isoString);
+                return d.toLocaleString('ko-KR', {
+                    year: 'numeric', month: '2-digit', day: '2-digit',
+                    hour: '2-digit', minute: '2-digit'
+                });
+            }
+
+            /** 마크다운 본문 → HTML (marked + DOMPurify, rag wiki 다이얼로그와 동일) */
+            function renderMarkdown(raw) {
+                if (typeof marked === 'undefined') {
+                    return '<pre style="white-space:pre-wrap">' + escapeHtml(raw || '') + '</pre>';
+                }
+                var html = marked.parse(raw || '', { gfm: true, breaks: true });
+                return typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(html) : html;
+            }
+
+            /** 글 상세 로드 후 메인 영역에 표시 */
+            function loadPostDetail(postId) {
+                boardContent.classList.add('showing-detail');
+                placeholder.style.display = 'none';
+                postDetail.style.display = 'block';
+                postDetailTitle.textContent = '';
+                postDetailMeta.textContent = '';
+                postDetailContent.innerHTML = '<div class="post-detail-loading"><i class="fa-solid fa-spinner fa-spin"></i> 불러오는 중...</div>';
+                postDetailComments.innerHTML = '';
+                if (commentCountEl) commentCountEl.textContent = '0';
+                currentPostId = postId;
+                if (commentWrite) commentWrite.style.display = 'block';
+                if (commentInput) commentInput.value = '';
+                if (commentWriteError) commentWriteError.textContent = '';
+
+                fetch('/api/board/posts/' + postId, { credentials: 'same-origin' })
+                    .then(function (res) {
+                        if (res.status === 401) {
+                            window.location.href = '/login';
+                            return null;
+                        }
+                        if (!res.ok) {
+                            postDetailContent.innerHTML = '<div class="post-detail-error">글을 불러오지 못했습니다.</div>';
+                            return null;
+                        }
+                        return res.json();
+                    })
+                    .then(function (data) {
+                        if (!data) return;
+                        postDetailTitle.textContent = data.title || '(제목 없음)';
+                        postDetailMeta.textContent = (data.writerUsername || data.writerLoginId || '') + ' · ' + formatDate(data.updatedAt);
+                        var isPostOwner = currentLoginId && (data.writerLoginId === currentLoginId);
+                        if (postDetailActions) {
+                            postDetailActions.innerHTML = isPostOwner
+                                ? '<button type="button" class="post-edit-btn" title="글 수정"><i class="fa-solid fa-pen-to-square"></i> 수정</button><button type="button" class="post-delete-btn" title="글 삭제"><i class="fa-solid fa-trash"></i> 삭제</button>'
+                                : '';
+                        }
+                        postDetailContent.innerHTML = renderMarkdown(data.content);
+                        var comments = data.comments || [];
+                        if (commentCountEl) commentCountEl.textContent = comments.length;
+                        postDetailComments.innerHTML = comments.length === 0
+                            ? '<div class="comments-empty">댓글이 없습니다.</div>'
+                            : comments.map(function (c) {
+                                var isOwner = currentLoginId && (c.writerLoginId === currentLoginId);
+                                var actionBtns = isOwner
+                                    ? '<button type="button" class="comment-edit-btn" title="댓글 수정"><i class="fa-solid fa-pen-to-square"></i></button><button type="button" class="comment-delete-btn" title="댓글 삭제"><i class="fa-solid fa-trash"></i></button>'
+                                    : '';
+                                return '<div class="comment-item" data-comment-id="' + c.commentId + '" data-raw-content="' + escapeAttr(c.content || '') + '">' +
+                                    '<div class="comment-meta">' +
+                                    '<span>' + escapeHtml(c.writerUsername || c.writerLoginId || '') + ' · ' + formatDate(c.updatedAt) + '</span>' +
+                                    actionBtns +
+                                    '</div>' +
+                                    '<div class="comment-body">' + renderMarkdown(c.content) + '</div>' +
+                                    '</div>';
+                            }).join('');
+                        syncPostListActive(postId);
+                    })
+                    .catch(function () {
+                        postDetailContent.innerHTML = '<div class="post-detail-error">글을 불러오는 중 오류가 발생했습니다.</div>';
+                    });
+            }
+
+            /** 목록에서 현재 상세로 보고 있는 글 아이템에만 active 강조 */
+            function syncPostListActive(postId) {
+                if (!postListEl || postId == null) return;
+                postListEl.querySelectorAll('.post-item.active').forEach(function (el) { el.classList.remove('active'); });
+                var item = postListEl.querySelector('.post-item[data-post-id="' + postId + '"]');
+                if (item) item.classList.add('active');
+            }
+
+            /** 플레이스홀더만 표시 (글 선택 해제) */
+            function showPlaceholder() {
+                boardContent.classList.remove('showing-detail');
+                placeholder.style.display = '';
+                postDetail.style.display = 'none';
+                currentPostId = null;
+                if (commentWrite) commentWrite.style.display = 'none';
+            }
+
+            /** 댓글 작성 전송 후 글 상세 다시 로드 */
+            function submitComment() {
+                if (!currentPostId) return;
+                var content = (commentInput && commentInput.value) ? commentInput.value.trim() : '';
+                if (commentWriteError) commentWriteError.textContent = '';
+                if (!content) {
+                    if (commentWriteError) commentWriteError.textContent = '댓글 내용을 입력하세요.';
+                    return;
+                }
+                commentSubmitBtn.disabled = true;
+                fetch('/api/board/posts/' + currentPostId + '/comments', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: content })
+                })
+                    .then(function (res) {
+                        if (res.status === 401) {
+                            window.location.href = '/login';
+                            return null;
+                        }
+                        return res.json().then(function (data) {
+                            return { ok: res.ok, status: res.status, data: data };
+                        });
+                    })
+                    .then(function (result) {
+                        if (!result) return;
+                        if (result.ok) {
+                            commentInput.value = '';
+                            loadPostDetail(currentPostId);
+                        } else {
+                            var msg = (result.data && result.data.error) ? result.data.error : '댓글 저장에 실패했습니다.';
+                            if (commentWriteError) commentWriteError.textContent = msg;
+                        }
+                    })
+                    .catch(function () {
+                        if (commentWriteError) commentWriteError.textContent = '댓글 저장 중 오류가 발생했습니다.';
+                    })
+                    .finally(function () {
+                        commentSubmitBtn.disabled = false;
+                    });
+            }
+
+            /** GET /api/board/posts 호출 후 사이드바에 글 목록 렌더 */
+            function loadPosts() {
+                return fetch('/api/board/posts', { credentials: 'same-origin' })
+                    .then(function (res) {
+                        if (res.status === 401) {
+                            window.location.href = '/login';
+                            return [];
+                        }
+                        if (!res.ok) return [];
+                        return res.json();
+                    })
+                    .then(function (items) {
+                        if (!Array.isArray(items)) return;
+                        if (items.length === 0) {
+                            postListEl.innerHTML = '<div class="empty-post-list">등록된 글이 없습니다.</div>';
+                            return;
+                        }
+                        postListEl.innerHTML = items.map(function (p) {
+                            return '<div class="post-item" data-post-id="' + p.postId + '" role="button" tabindex="0">' +
+                                '<div class="post-title">' + escapeHtml(p.title || '(제목 없음)') + '</div>' +
+                                '<div class="post-meta">' + escapeHtml(p.writerUsername || p.writerLoginId || '') + ' · ' + formatDate(p.updatedAt) + '</div>' +
+                                '</div>';
+                        }).join('');
+                    })
+                    .catch(function () {
+                        postListEl.innerHTML = '<div class="empty-post-list">목록을 불러오는 중 오류가 발생했습니다.</div>';
+                    });
+            }
+
+            function escapeHtml(text) {
+                var div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+            /** data 속성에 넣을 때 사용 (따옴표·개행 등 이스케이프) */
+            function escapeAttr(s) {
+                return String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\r?\n/g, '&#10;');
+            }
+
+            var writePostBackdrop = document.getElementById('writePostBackdrop');
+            var writePostDialogTitle = document.getElementById('writePostDialogTitle');
+            var writePostTitleInput = document.getElementById('writePostTitleInput');
+            var writePostBodyInput = document.getElementById('writePostBodyInput');
+            var writePostPreview = document.getElementById('writePostPreview');
+            var writePostTabWrite = document.getElementById('writePostTabWrite');
+            var writePostTabPreview = document.getElementById('writePostTabPreview');
+            var writePostSubmitBtn = document.getElementById('writePostSubmitBtn');
+            var writePostCancelBtn = document.getElementById('writePostCancelBtn');
+            var writePostError = document.getElementById('writePostError');
+            var editingPostId = null;
+
+            function switchWritePostTab(tab) {
+                var isWrite = (tab === 'write');
+                if (writePostTabWrite) { writePostTabWrite.classList.toggle('active', isWrite); writePostTabWrite.setAttribute('aria-selected', isWrite ? 'true' : 'false'); }
+                if (writePostTabPreview) { writePostTabPreview.classList.toggle('active', !isWrite); writePostTabPreview.setAttribute('aria-selected', !isWrite ? 'true' : 'false'); }
+                if (writePostBodyInput) writePostBodyInput.classList.toggle('hide-for-preview', !isWrite);
+                if (writePostPreview) {
+                    writePostPreview.classList.toggle('active', !isWrite);
+                    if (!isWrite && writePostBodyInput) writePostPreview.innerHTML = renderMarkdown(writePostBodyInput.value || '');
+                }
+            }
+
+            function openWritePostModal() {
+                editingPostId = null;
+                if (writePostDialogTitle) writePostDialogTitle.textContent = '글쓰기';
+                if (writePostSubmitBtn) writePostSubmitBtn.textContent = '등록';
+                if (writePostError) writePostError.textContent = '';
+                if (writePostTitleInput) writePostTitleInput.value = '';
+                if (writePostBodyInput) writePostBodyInput.value = '';
+                switchWritePostTab('write');
+                if (writePostBackdrop) {
+                    writePostBackdrop.classList.add('open');
+                    writePostBackdrop.setAttribute('aria-hidden', 'false');
+                }
+                if (writePostTitleInput) writePostTitleInput.focus();
+            }
+            function openWritePostModalForEdit(postId) {
+                if (!postId) return;
+                editingPostId = postId;
+                if (writePostDialogTitle) writePostDialogTitle.textContent = '글 수정';
+                if (writePostSubmitBtn) writePostSubmitBtn.textContent = '수정';
+                if (writePostError) writePostError.textContent = '';
+                switchWritePostTab('write');
+                fetch('/api/board/posts/' + postId, { credentials: 'same-origin' })
+                    .then(function (res) {
+                        if (res.status === 401) { window.location.href = '/login'; return null; }
+                        if (!res.ok) return null;
+                        return res.json();
+                    })
+                    .then(function (data) {
+                        if (!data) return;
+                        if (writePostTitleInput) writePostTitleInput.value = data.title || '';
+                        if (writePostBodyInput) writePostBodyInput.value = data.content || '';
+                        if (writePostBackdrop) {
+                            writePostBackdrop.classList.add('open');
+                            writePostBackdrop.setAttribute('aria-hidden', 'false');
+                        }
+                        if (writePostTitleInput) writePostTitleInput.focus();
+                    });
+            }
+            function closeWritePostModal() {
+                if (writePostBackdrop) {
+                    writePostBackdrop.classList.remove('open');
+                    writePostBackdrop.setAttribute('aria-hidden', 'true');
+                }
+            }
+            function submitWritePost() {
+                if (!writePostTitleInput || !writePostBodyInput) return;
+                var title = (writePostTitleInput.value || '').trim();
+                var content = (writePostBodyInput.value || '').trim();
+                if (writePostError) writePostError.textContent = '';
+                if (!title) {
+                    if (writePostError) writePostError.textContent = '제목을 입력하세요.';
+                    return;
+                }
+                var isEdit = editingPostId != null;
+                var url = isEdit ? '/api/board/posts/' + editingPostId : '/api/board/posts';
+                var method = isEdit ? 'PUT' : 'POST';
+                writePostSubmitBtn.disabled = true;
+                fetch(url, {
+                    method: method,
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title: title, content: content })
+                })
+                    .then(function (res) {
+                        if (res.status === 401) { window.location.href = '/login'; return null; }
+                        return res.json().then(function (data) { return { ok: res.ok, status: res.status, data: data }; }).catch(function () { return { ok: res.ok, status: res.status, data: null }; });
+                    })
+                    .then(function (result) {
+                        if (!result) return;
+                        if (result.ok) {
+                            closeWritePostModal();
+                            var postIdToShow = isEdit ? editingPostId : (result.data && result.data.postId);
+                            loadPosts().then(function () {
+                                if (postIdToShow) loadPostDetail(postIdToShow);
+                            });
+                        } else {
+                            var msg = (result.data && result.data.error) ? result.data.error : (isEdit ? '글 수정에 실패했습니다.' : '글 저장에 실패했습니다.');
+                            if (writePostError) writePostError.textContent = msg;
+                        }
+                    })
+                    .catch(function () {
+                        if (writePostError) writePostError.textContent = isEdit ? '글 수정 중 오류가 발생했습니다.' : '글 저장 중 오류가 발생했습니다.';
+                    })
+                    .finally(function () { writePostSubmitBtn.disabled = false; });
+            }
+
+            if (writePostBtn) writePostBtn.addEventListener('click', openWritePostModal);
+            if (writePostCancelBtn) writePostCancelBtn.addEventListener('click', closeWritePostModal);
+            if (writePostSubmitBtn) writePostSubmitBtn.addEventListener('click', submitWritePost);
+            if (writePostTabWrite) writePostTabWrite.addEventListener('click', function () { switchWritePostTab('write'); });
+            if (writePostTabPreview) writePostTabPreview.addEventListener('click', function () { switchWritePostTab('preview'); });
+
+            if (commentSubmitBtn) commentSubmitBtn.addEventListener('click', submitComment);
+
+            var commentDeleteBackdrop = document.getElementById('commentDeleteBackdrop');
+            var commentDeleteCancelBtn = document.getElementById('commentDeleteCancelBtn');
+            var commentDeleteConfirmBtn = document.getElementById('commentDeleteConfirmBtn');
+
+            function openCommentDeleteDialog(commentId) {
+                pendingCommentIdToDelete = commentId;
+                if (commentDeleteBackdrop) {
+                    commentDeleteBackdrop.classList.add('open');
+                    commentDeleteBackdrop.setAttribute('aria-hidden', 'false');
+                }
+            }
+            function closeCommentDeleteDialog() {
+                pendingCommentIdToDelete = null;
+                if (commentDeleteBackdrop) {
+                    commentDeleteBackdrop.classList.remove('open');
+                    commentDeleteBackdrop.setAttribute('aria-hidden', 'true');
+                }
+            }
+            function doDeleteComment() {
+                if (!pendingCommentIdToDelete) return;
+                var commentId = pendingCommentIdToDelete;
+                closeCommentDeleteDialog();
+                commentDeleteConfirmBtn.disabled = true;
+                fetch('/api/board/comments/' + commentId, { method: 'DELETE', credentials: 'same-origin' })
+                    .then(function (res) {
+                        if (res.status === 401) { window.location.href = '/login'; return null; }
+                        if (res.status === 204) return { ok: true };
+                        return res.json().then(function (data) { return { ok: false, msg: (data && data.error) || '삭제에 실패했습니다.' }; });
+                    })
+                    .then(function (result) {
+                        if (!result) return;
+                        if (result.ok && currentPostId) loadPostDetail(currentPostId);
+                        else if (result.msg && commentWriteError) commentWriteError.textContent = result.msg;
+                    })
+                    .finally(function () { commentDeleteConfirmBtn.disabled = false; });
+            }
+
+            if (commentDeleteCancelBtn) commentDeleteCancelBtn.addEventListener('click', closeCommentDeleteDialog);
+            if (commentDeleteConfirmBtn) commentDeleteConfirmBtn.addEventListener('click', doDeleteComment);
+            if (commentDeleteBackdrop) commentDeleteBackdrop.addEventListener('click', function (e) {
+                if (e.target === commentDeleteBackdrop) closeCommentDeleteDialog();
+            });
+
+            var postDeleteBackdrop = document.getElementById('postDeleteBackdrop');
+            var postDeleteCancelBtn = document.getElementById('postDeleteCancelBtn');
+            var postDeleteConfirmBtn = document.getElementById('postDeleteConfirmBtn');
+
+            function openPostDeleteDialog() {
+                if (!currentPostId) return;
+                if (postDeleteBackdrop) {
+                    postDeleteBackdrop.classList.add('open');
+                    postDeleteBackdrop.setAttribute('aria-hidden', 'false');
+                }
+            }
+            function closePostDeleteDialog() {
+                if (postDeleteBackdrop) {
+                    postDeleteBackdrop.classList.remove('open');
+                    postDeleteBackdrop.setAttribute('aria-hidden', 'true');
+                }
+            }
+            function doDeletePost() {
+                if (!currentPostId) return;
+                var postId = currentPostId;
+                closePostDeleteDialog();
+                postDeleteConfirmBtn.disabled = true;
+                fetch('/api/board/posts/' + postId, { method: 'DELETE', credentials: 'same-origin' })
+                    .then(function (res) {
+                        if (res.status === 401) { window.location.href = '/login'; return null; }
+                        if (res.status === 204) return { ok: true };
+                        return res.json().then(function (data) { return { ok: false, msg: (data && data.error) || '삭제에 실패했습니다.' }; });
+                    })
+                    .then(function (result) {
+                        if (!result) return;
+                        if (result.ok) {
+                            showPlaceholder();
+                            loadPosts();
+                        } else if (result.msg) alert(result.msg);
+                    })
+                    .finally(function () { postDeleteConfirmBtn.disabled = false; });
+            }
+
+            if (postDeleteCancelBtn) postDeleteCancelBtn.addEventListener('click', closePostDeleteDialog);
+            if (postDeleteConfirmBtn) postDeleteConfirmBtn.addEventListener('click', doDeletePost);
+            if (postDeleteBackdrop) postDeleteBackdrop.addEventListener('click', function (e) {
+                if (e.target === postDeleteBackdrop) closePostDeleteDialog();
+            });
+
+            if (postDetail) postDetail.addEventListener('click', function (e) {
+                if (e.target.closest('.post-edit-btn')) { e.preventDefault(); openWritePostModalForEdit(currentPostId); }
+                if (e.target.closest('.post-delete-btn')) { e.preventDefault(); openPostDeleteDialog(); }
+            });
+
+            function openCommentEdit(item) {
+                var rawContent = item.getAttribute('data-raw-content') || '';
+                var meta = item.querySelector('.comment-meta');
+                var body = item.querySelector('.comment-body');
+                if (!meta || !body || item.querySelector('.comment-edit-wrap')) return;
+                var wrap = document.createElement('div');
+                wrap.className = 'comment-edit-wrap';
+                var textarea = document.createElement('textarea');
+                textarea.className = 'comment-edit-textarea';
+                textarea.placeholder = '댓글 내용';
+                textarea.value = rawContent;
+                var errEl = document.createElement('div');
+                errEl.className = 'comment-edit-error';
+                var actions = document.createElement('div');
+                actions.className = 'comment-edit-actions';
+                var cancelBtn = document.createElement('button');
+                cancelBtn.type = 'button';
+                cancelBtn.className = 'comment-edit-cancel';
+                cancelBtn.textContent = '취소';
+                var submitBtn = document.createElement('button');
+                submitBtn.type = 'button';
+                submitBtn.className = 'comment-edit-submit';
+                submitBtn.textContent = '수정';
+                actions.appendChild(cancelBtn);
+                actions.appendChild(submitBtn);
+                wrap.appendChild(textarea);
+                wrap.appendChild(errEl);
+                wrap.appendChild(actions);
+                meta.insertAdjacentElement('afterend', wrap);
+                body.style.display = 'none';
+            }
+            function cancelCommentEdit(item) {
+                var wrap = item.querySelector('.comment-edit-wrap');
+                var body = item.querySelector('.comment-body');
+                if (wrap) wrap.remove();
+                if (body) body.style.display = '';
+            }
+            function submitCommentEdit(item) {
+                var wrap = item.querySelector('.comment-edit-wrap');
+                var body = item.querySelector('.comment-body');
+                var textarea = wrap && wrap.querySelector('.comment-edit-textarea');
+                var submitBtn = wrap && wrap.querySelector('.comment-edit-submit');
+                var errEl = wrap && wrap.querySelector('.comment-edit-error');
+                if (!wrap || !textarea || !body) return;
+                var commentId = item.getAttribute('data-comment-id');
+                var content = textarea.value.trim();
+                if (!content) { if (errEl) errEl.textContent = '댓글 내용을 입력하세요.'; return; }
+                if (errEl) errEl.textContent = '';
+                if (submitBtn) submitBtn.disabled = true;
+                fetch('/api/board/comments/' + commentId, { method: 'PUT', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: content }) })
+                    .then(function (res) {
+                        if (res.status === 401) { window.location.href = '/login'; return null; }
+                        if (res.ok) return { ok: true };
+                        return res.json().then(function (data) { return { ok: false, msg: (data && data.error) || '수정에 실패했습니다.' }; }).catch(function () { return { ok: false, msg: '수정에 실패했습니다.' }; });
+                    })
+                    .then(function (result) {
+                        if (!result) return;
+                        if (result.ok) {
+                            if (currentPostId) loadPostDetail(currentPostId);
+                        } else if (result.msg && errEl) errEl.textContent = result.msg;
+                    })
+                    .finally(function () { if (submitBtn) submitBtn.disabled = false; });
+            }
+
+            postDetailComments.addEventListener('click', function (e) {
+                var item = e.target.closest('.comment-item');
+                if (!item) return;
+                if (e.target.closest('.comment-edit-btn')) { e.preventDefault(); openCommentEdit(item); return; }
+                if (e.target.closest('.comment-delete-btn')) { e.preventDefault(); var commentId = item.getAttribute('data-comment-id'); if (commentId) openCommentDeleteDialog(commentId); return; }
+                if (e.target.closest('.comment-edit-cancel')) { e.preventDefault(); cancelCommentEdit(item); return; }
+                if (e.target.closest('.comment-edit-submit')) { e.preventDefault(); submitCommentEdit(item); return; }
+            });
+
+            postListEl.addEventListener('click', function (e) {
+                var item = e.target.closest('.post-item');
+                if (!item) return;
+                var postId = item.getAttribute('data-post-id');
+                if (postId) {
+                    document.querySelectorAll('.post-item.active').forEach(function (el) { el.classList.remove('active'); });
+                    item.classList.add('active');
+                    loadPostDetail(postId);
+                }
+            });
+
+            loadPosts();
+        </script>
+    </body>
+</html>

@@ -1,5 +1,6 @@
-# local/staging 공통: HTTPS (인증서·키는 빌드 시 config/ssl → JAR classpath:ssl/ 포함)
+# local/staging 공통: HTTPS 기본 포트 8080 (인증서·키는 classpath:ssl/ 포함)
 server:
+  port: 8080
   ssl:
     certificate: classpath:ssl/cert.pem
     certificate-private-key: classpath:ssl/key.pem
