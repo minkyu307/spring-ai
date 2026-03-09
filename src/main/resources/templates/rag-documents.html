@@ -625,6 +625,9 @@
                 width: 100%;
                 border-collapse: collapse;
             }
+            .main-content .card table {
+                table-layout: fixed;
+            }
             th,
             td {
                 border-top: 1px solid #e8eaed;
@@ -637,6 +640,10 @@
                 background: #f8f9fa;
                 font-weight: 600;
                 border-top: none;
+            }
+            .main-content .card table th:last-child,
+            .main-content .card table td:last-child {
+                text-align: right;
             }
             .title-cell {
                 font-weight: 600;
@@ -700,6 +707,12 @@
                 outline: none;
                 border-color: #1967d2;
             }
+            .modal-status {
+                margin-top: 8px;
+                font-size: 0.875em;
+                min-height: 1.2em;
+            }
+            .modal-status.error { color: #d93025; }
             .modal-actions {
                 margin-top: 12px;
                 display: flex;
@@ -816,11 +829,9 @@
                         </button>
                     </div>
                     <div class="card-desc">
-                        <span class="badge">.txt</span>, <span class="badge">.md</span>,
-                        <span class="badge">.markdown</span>, <span class="badge">.pdf</span>,
-                        <span class="badge">.docx</span>, <span class="badge">.pptx</span>를
-                        허용하며, 여러 파일을 한 번에 업로드할 수 있습니다. PDF는 페이지 단위로 분리
-                        후, 필요 시 OCR을 수행합니다.
+                        <span class="badge">.txt</span> <span class="badge">.md</span>
+                        <span class="badge">.markdown</span> <span class="badge">.pdf</span>
+                        <span class="badge">.docx</span> <span class="badge">.pptx</span>
                     </div>
                     <div class="status" id="status"></div>
                 </div>
@@ -830,10 +841,9 @@
                         <button class="btn btn-primary" id="openUrlDialogBtn">URL 업로드</button>
                     </div>
                     <div class="card-desc">
-                        단일 URL(인증/크롤링 제외)을 읽어서 적재합니다.
-                        <span class="badge">HTML</span>, <span class="badge">PDF</span>,
-                        <span class="badge">Markdown</span>, <span class="badge">TXT</span>는 자동
-                        판별됩니다.
+                        단일 URL(인증/크롤링 제외)을 읽어서 적재
+                        <span class="badge">HTML</span> <span class="badge">PDF</span>
+                        <span class="badge">Markdown</span> <span class="badge">TXT</span>
                     </div>
                     <div class="status" id="urlStatus"></div>
                 </div>
@@ -845,7 +855,7 @@
                         </button>
                     </div>
                     <div class="card-desc">
-                        두레이 Wiki 페이지를 Vector DB에 적재합니다.
+                        두레이 Wiki 페이지를 Vector DB에 적재
                     </div>
                 </div>
             </aside>
@@ -867,10 +877,10 @@
                         <table>
                             <thead>
                                 <tr>
-                                    <th style="width: 32%">제목</th>
-                                    <th style="width: 28%">파일명</th>
-                                    <th style="width: 12%">청크</th>
-                                    <th style="width: 28%">작업</th>
+                                    <th style="width: 42%">제목</th>
+                                    <th style="width: 26%">파일명</th>
+                                    <th style="width: 10%">청크</th>
+                                    <th style="width: 22%">작업</th>
                                 </tr>
                             </thead>
                             <tbody id="docTbody">
@@ -926,6 +936,7 @@
                     type="text"
                     placeholder="https://example.com/doc"
                     autocomplete="off" />
+                <div class="modal-status" id="urlModalStatus" role="alert" aria-live="polite"></div>
                 <div class="modal-actions">
                     <button class="btn btn-secondary" id="cancelUrlBtn">취소</button>
                     <button class="btn btn-primary" id="ingestUrlBtn">적재</button>
@@ -957,6 +968,7 @@
             const urlInput = document.getElementById('urlInput');
             const cancelUrlBtn = document.getElementById('cancelUrlBtn');
             const ingestUrlBtn = document.getElementById('ingestUrlBtn');
+            const urlModalStatus = document.getElementById('urlModalStatus');
 
             /** 사이드바 파일 업로드 카드 상태 메시지 */
             function setStatus(text) {
@@ -1080,6 +1092,8 @@
                 urlModalBackdrop.classList.add('open');
                 urlModalBackdrop.setAttribute('aria-hidden', 'false');
                 urlInput.value = '';
+                urlModalStatus.textContent = '';
+                urlModalStatus.className = 'modal-status';
                 setTimeout(() => urlInput.focus(), 0);
             }
 
@@ -1087,14 +1101,19 @@
                 urlModalBackdrop.classList.remove('open');
                 urlModalBackdrop.setAttribute('aria-hidden', 'true');
                 urlInput.value = '';
+                urlModalStatus.textContent = '';
+                urlModalStatus.className = 'modal-status';
             }
 
             async function ingestUrl() {
                 const url = (urlInput.value || '').trim();
                 if (!url) {
-                    setUrlStatus('URL을 입력해 주세요.', 'error');
+                    urlModalStatus.textContent = 'URL을 입력해 주세요.';
+                    urlModalStatus.className = 'modal-status error';
                     return;
                 }
+                urlModalStatus.textContent = '';
+                urlModalStatus.className = 'modal-status';
 
                 uploadBtn.disabled = true;
                 openUrlDialogBtn.disabled = true;

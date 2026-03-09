@@ -87,12 +87,12 @@ public class DocumentIngestionService {
 	}
 
 	/**
-	 * 문서 내용을 기반으로 20자 이내 제목을 생성한다. // UI 목록 표시용
+	 * 문서 내용을 기반으로 30자 이내 제목을 생성한다. // UI 목록 표시용
 	 */
 	private String generateTitle(String content, String filename) {
 		String fallback = (filename != null && !filename.isBlank())
 				? filename
-				: firstNCodePoints(content, 20);
+				: firstNCodePoints(content, 30);
 
 		String sample = content == null ? "" : content.strip();
 		if (sample.length() > 2000) {
@@ -101,7 +101,7 @@ public class DocumentIngestionService {
 
 		try {
 			String prompt = """
-					Create a short Korean title (max 20 characters) for the following document.
+					Create a short Korean title (max 30 characters) for the following document.
 					Output ONLY the title text, no quotes, no extra words.
 
 					Document:
@@ -120,7 +120,7 @@ public class DocumentIngestionService {
 			if (title.isBlank()) {
 				return fallback;
 			}
-			return firstNCodePoints(title, 20);
+			return firstNCodePoints(title, 30);
 		}
 		catch (Exception e) {
 			return fallback;
