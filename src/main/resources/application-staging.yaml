@@ -1,3 +1,10 @@
+# staging: Google OIDC 로그인 버튼 숨김 (form 로그인만 사용)
+app:
+  security:
+    oauth2:
+      google:
+        visible: false
+
 spring:
   datasource:
     url: jdbc:postgresql://10.253.12.78:25434/spring_ai
