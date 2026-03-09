@@ -1,6 +1,16 @@
+# local/staging 공통: HTTPS (인증서·키는 빌드 시 config/ssl → JAR classpath:ssl/ 포함)
+server:
+  ssl:
+    certificate: classpath:ssl/cert.pem
+    certificate-private-key: classpath:ssl/key.pem
+
 spring:
   application:
     name: spring-ai
+  servlet:
+    multipart:
+      max-file-size: 10MB   # 단일 파일 최대 10MB
+      max-request-size: 100MB   # 요청 본문 전체 최대 100MB
   # Phase 1: Google OIDC 로그인 (값은 환경변수로 설정, 저장소에 시크릿 커밋 금지)
   security:
     oauth2:

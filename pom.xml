@@ -148,6 +148,16 @@
     </dependencyManagement>
 
     <build>
+        <!-- config/ssl/*.pem 을 JAR 내 ssl/ 로 패키징 (빌드 전 config/ssl 에 키·인증서 필요) -->
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <resource>
+                <directory>config/ssl</directory>
+                <targetPath>ssl</targetPath>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

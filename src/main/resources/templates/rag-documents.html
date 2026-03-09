@@ -1025,10 +1025,25 @@
                 }
             }
 
+            const MAX_FILE_SIZE = 10 * 1024 * 1024;   // 10MB (서버 spring.servlet.multipart.max-file-size와 동일)
+            const MAX_REQUEST_SIZE = 100 * 1024 * 1024;   // 100MB (서버 max-request-size와 동일)
+
             async function upload() {
                 const files = fileInput.files ? Array.from(fileInput.files) : [];
                 if (files.length === 0) {
                     setStatus('파일을 선택해 주세요.');
+                    return;
+                }
+                let totalSize = 0;
+                for (const f of files) {
+                    if (f.size > MAX_FILE_SIZE) {
+                        setStatus(`용량 초과: "${f.name}"은(는) 단일 파일 최대 10MB를 초과합니다. (${(f.size / 1024 / 1024).toFixed(2)}MB)`);
+                        return;
+                    }
+                    totalSize += f.size;
+                }
+                if (totalSize > MAX_REQUEST_SIZE) {
+                    setStatus(`용량 초과: 전체 크기가 최대 100MB를 초과합니다. (${(totalSize / 1024 / 1024).toFixed(2)}MB)`);
                     return;
                 }
                 uploadBtn.disabled = true;
@@ -1051,11 +1066,11 @@
                     }
                     const data = await res.json();
                     setStatus(formatUploadStatus(data, files.length));
-                    fileInput.value = '';
                     await loadDocs();
                 } catch (e) {
                     setStatus(`적재 실패: ${e.message}`);
                 } finally {
+                    fileInput.value = ''; // 실패 후 같은 파일 재선택 시 change 이벤트가 나도록 초기화
                     uploadBtn.disabled = false;
                     openUrlDialogBtn.disabled = false;
                     refreshBtn.disabled = false;
