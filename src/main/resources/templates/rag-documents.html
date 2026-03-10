@@ -1311,6 +1311,7 @@
             const wikiUploadBtn = document.getElementById('wikiUploadBtn');
             const wikiSelectedCount = document.getElementById('wikiSelectedCount');
             const wikiUploadStatus = document.getElementById('wikiUploadStatus');
+            const MAX_WIKI_SELECTABLE_PAGES = 30;
 
             function setWikiUploadStatus(msg, type) {
                 wikiUploadStatus.textContent = msg || '';
@@ -1321,6 +1322,12 @@
             function updateSelectedCount() {
                 const n = wikiTreeWrap.querySelectorAll('input.tree-cb:checked').length;
                 wikiSelectedCount.textContent = n > 0 ? `${n}개 선택됨` : '선택된 항목 없음';
+                if (n > MAX_WIKI_SELECTABLE_PAGES) {
+                    setWikiUploadStatus('[Dooray v1 api 요청 제한으로 인해 최대 30 페이지 선택 가능합니다]', 'error');
+                    wikiUploadBtn.disabled = true;
+                    return;
+                }
+                setWikiUploadStatus('');
                 wikiUploadBtn.disabled = n === 0;
             }
 

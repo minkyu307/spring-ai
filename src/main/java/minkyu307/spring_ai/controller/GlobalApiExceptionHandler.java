@@ -136,7 +136,7 @@ public class GlobalApiExceptionHandler {
 		return buildError(
 			HttpStatus.INTERNAL_SERVER_ERROR,
 			"INTERNAL_SERVER_ERROR",
-			"서버 내부 오류가 발생했습니다.",
+			e.getMessage() != null && !e.getMessage().isBlank() ? e.getMessage() : "서버 내부 오류가 발생했습니다.",
 			request
 		);
 	}

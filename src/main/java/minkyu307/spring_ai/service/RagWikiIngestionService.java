@@ -3,15 +3,9 @@ package minkyu307.spring_ai.service;
 import lombok.RequiredArgsConstructor;
 import minkyu307.spring_ai.dto.RagWikiIngestRequest;
 import minkyu307.spring_ai.dto.RagWikiIngestResponse;
-import minkyu307.spring_ai.repository.UserDoorayApiKeyRepository;
 import minkyu307.spring_ai.security.SecurityUtils;
 import org.springframework.ai.document.Document;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -29,8 +23,7 @@ public class RagWikiIngestionService {
 
     private static final String DOORAY_BASE = "https://api.dooray.com";
 
-    private final UserDoorayApiKeyRepository doorayApiKeyRepository;
-    private final RestTemplate restTemplate;
+    private final DoorayWikiApiClient doorayWikiApiClient;
     private final DocumentIngestionService ingestionService;
 
     /**
@@ -41,7 +34,6 @@ public class RagWikiIngestionService {
             throw new IllegalArgumentException("적재할 페이지가 없습니다.");
         }
 
-        HttpEntity<Void> entity = new HttpEntity<>(authHeaders());
         String loginId = SecurityUtils.getCurrentLoginId();
 
         List<RagWikiIngestResponse.PageResult> results = new ArrayList<>();
@@ -51,7 +43,7 @@ public class RagWikiIngestionService {
 
         for (RagWikiIngestRequest.WikiPageRef ref : request.pages()) {
             try {
-                RagWikiIngestResponse.PageResult result = ingestPage(ref, entity, loginId);
+                RagWikiIngestResponse.PageResult result = ingestPage(ref, loginId);
                 results.add(result);
                 if ("SUCCESS".equals(result.status())) {
                     succeeded++;
@@ -76,14 +68,10 @@ public class RagWikiIngestionService {
     @SuppressWarnings("unchecked")
     private RagWikiIngestResponse.PageResult ingestPage(
             RagWikiIngestRequest.WikiPageRef ref,
-            HttpEntity<Void> entity,
             String loginId) {
 
         String url = DOORAY_BASE + "/wiki/v1/wikis/" + ref.wikiId() + "/pages/" + ref.pageId();
-        Map<String, Object> resp = restTemplate.exchange(
-                url, HttpMethod.GET, entity,
-                new ParameterizedTypeReference<Map<String, Object>>() {}
-        ).getBody();
+        Map<String, Object> resp = doorayWikiApiClient.getWithRetry(url).getBody();
 
         if (resp == null) throw new IllegalStateException("두레이 API 응답이 없습니다.");
 
@@ -124,16 +112,4 @@ public class RagWikiIngestionService {
         );
     }
 
-    /**
-     * 현재 로그인 사용자의 두레이 API 키로 Authorization 헤더를 생성한다.
-     */
-    private HttpHeaders authHeaders() {
-        String loginId = SecurityUtils.getCurrentLoginId();
-        String apiKey = doorayApiKeyRepository.findById(loginId)
-                .map(k -> k.getApiKey())
-                .orElseThrow(() -> new IllegalStateException("두레이 API 키가 설정되지 않았습니다."));
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", "dooray-api " + apiKey);
-        return headers;
-    }
 }

@@ -7,21 +7,15 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
-import org.springframework.web.client.HttpClientErrorException;
 import lombok.RequiredArgsConstructor;
-import minkyu307.spring_ai.repository.UserDoorayApiKeyRepository;
-import minkyu307.spring_ai.security.SecurityUtils;
-import org.springframework.core.ParameterizedTypeReference;
+import minkyu307.spring_ai.service.DoorayWikiApiClient;
 import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.client.RestTemplate;
 
 /**
  * 두레이 Wiki API 프록시. 사용자 API 키로 두레이 서버에 요청 후 결과를 반환.
@@ -33,21 +27,7 @@ public class DoorayWikiApiController {
 
     private static final String DOORAY_BASE = "https://api.dooray.com";
 
-    private final UserDoorayApiKeyRepository doorayApiKeyRepository;
-    private final RestTemplate restTemplate;
-
-    /**
-     * 현재 사용자의 두레이 API 키로 Authorization 헤더 생성.
-     */
-    private HttpHeaders authHeaders() {
-        String loginId = SecurityUtils.getCurrentLoginId();
-        String apiKey = doorayApiKeyRepository.findById(loginId)
-            .map(k -> k.getApiKey())
-            .orElseThrow(() -> new IllegalStateException("두레이 API 키가 설정되지 않았습니다."));
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", "dooray-api " + apiKey);
-        return headers;
-    }
+    private final DoorayWikiApiClient doorayWikiApiClient;
 
     /**
      * 접근 가능한 위키 목록 조회.
@@ -57,9 +37,7 @@ public class DoorayWikiApiController {
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "100") int size) {
         String url = DOORAY_BASE + "/wiki/v1/wikis?page=" + page + "&size=" + size;
-        return restTemplate.exchange(url, HttpMethod.GET,
-            new HttpEntity<>(authHeaders()),
-            new ParameterizedTypeReference<Map<String, Object>>() {});
+        return doorayWikiApiClient.getWithRetry(url);
     }
 
     /**
@@ -71,17 +49,11 @@ public class DoorayWikiApiController {
         @RequestParam(required = false) String parentPageId) {
         String url = DOORAY_BASE + "/wiki/v1/wikis/" + wikiId + "/pages"
             + (parentPageId != null ? "?parentPageId=" + parentPageId : "");
-        return restTemplate.exchange(url, HttpMethod.GET,
-            new HttpEntity<>(authHeaders()),
-            new ParameterizedTypeReference<Map<String, Object>>() {});
+        return doorayWikiApiClient.getWithRetry(url);
     }
 
     /** 동시 병렬 요청 수 상한 — Dooray Rate Limit 대응 */
     private static final int PARALLEL_BATCH = 5;
-    /** 429 수신 시 재시도 대기(ms) */
-    private static final long RETRY_DELAY_MS = 500;
-    /** 최대 재시도 횟수 */
-    private static final int MAX_RETRY = 3;
 
     /**
      * 특정 페이지부터 모든 하위 페이지를 BFS 레벨 단위 병렬 조회하여 평탄화된 목록으로 반환.
@@ -92,7 +64,8 @@ public class DoorayWikiApiController {
         @PathVariable String wikiId,
         @PathVariable String pageId) {
 
-        HttpEntity<Void> entity = new HttpEntity<>(authHeaders());
+        // 요청 스레드에서 인증 헤더를 미리 캡처해 비동기 스레드에서 SecurityContext 재조회가 발생하지 않도록 한다.
+        HttpEntity<Void> authEntity = doorayWikiApiClient.createAuthenticatedEntity();
         List<Map<String, Object>> allPages = new ArrayList<>();
         List<String> currentLevel = List.of(pageId);
         ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
@@ -108,7 +81,7 @@ public class DoorayWikiApiController {
 
                     List<CompletableFuture<List<Map<String, Object>>>> futures = batch.stream()
                         .map(parentId -> CompletableFuture.<List<Map<String, Object>>>supplyAsync(
-                            () -> fetchPagesWithRetry(wikiId, parentId, entity), executor))
+                            () -> fetchPagesWithRetry(wikiId, parentId, authEntity), executor))
                         .collect(Collectors.toList());
 
                     futures.stream()
@@ -139,41 +112,23 @@ public class DoorayWikiApiController {
         @PathVariable String wikiId,
         @PathVariable String pageId) {
         String url = DOORAY_BASE + "/wiki/v1/wikis/" + wikiId + "/pages/" + pageId;
-        return restTemplate.exchange(url, HttpMethod.GET,
-            new HttpEntity<>(authHeaders()),
-            new ParameterizedTypeReference<Map<String, Object>>() {});
+        return doorayWikiApiClient.getWithRetry(url);
     }
 
     /**
      * 단일 parentPageId에 대한 페이지 목록 조회. 429 응답 시 RETRY_DELAY_MS 대기 후 재시도.
      */
     private List<Map<String, Object>> fetchPagesWithRetry(
-        String wikiId, String parentId, HttpEntity<Void> entity) {
+        String wikiId,
+        String parentId,
+        HttpEntity<Void> authEntity) {
 
         String url = DOORAY_BASE + "/wiki/v1/wikis/" + wikiId
             + "/pages?parentPageId=" + parentId;
-
-        for (int attempt = 0; attempt <= MAX_RETRY; attempt++) {
-            try {
-                Map<String, Object> resp = restTemplate.exchange(
-                    url, HttpMethod.GET, entity,
-                    new ParameterizedTypeReference<Map<String, Object>>() {}
-                ).getBody();
-                if (resp == null) return List.of();
-                @SuppressWarnings("unchecked")
-                List<Map<String, Object>> pages = (List<Map<String, Object>>) resp.get("result");
-                return pages != null ? pages : List.of();
-            } catch (HttpClientErrorException.TooManyRequests e) {
-                if (attempt == MAX_RETRY) throw e;
-                try {
-                    // 재시도마다 대기 시간을 지수적으로 증가
-                    Thread.sleep(RETRY_DELAY_MS * (1L << attempt));
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
-                    throw new RuntimeException(ie);
-                }
-            }
-        }
-        return List.of();
+        Map<String, Object> resp = doorayWikiApiClient.getWithRetry(url, authEntity).getBody();
+        if (resp == null) return List.of();
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> pages = (List<Map<String, Object>>) resp.get("result");
+        return pages != null ? pages : List.of();
     }
 }
