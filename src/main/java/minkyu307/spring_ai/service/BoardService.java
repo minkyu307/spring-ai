@@ -6,6 +6,8 @@ import minkyu307.spring_ai.dto.PostListItemDto;
 import minkyu307.spring_ai.entity.Comment;
 import minkyu307.spring_ai.entity.Post;
 import minkyu307.spring_ai.entity.User;
+import minkyu307.spring_ai.exception.ForbiddenOperationException;
+import minkyu307.spring_ai.exception.ResourceNotFoundException;
 import minkyu307.spring_ai.repository.CommentRepository;
 import minkyu307.spring_ai.repository.PostRepository;
 import minkyu307.spring_ai.repository.UserRepository;
@@ -67,9 +69,9 @@ public class BoardService {
 	public void updatePost(Long postId, String title, String content) {
 		String loginId = SecurityUtils.getCurrentLoginId();
 		Post post = postRepository.findById(postId)
-			.orElseThrow(() -> new IllegalArgumentException("글이 없습니다: " + postId));
+			.orElseThrow(() -> new ResourceNotFoundException("글이 없습니다: " + postId));
 		if (!post.getWriter().getLoginId().equals(loginId)) {
-			throw new IllegalArgumentException("본인 글만 수정할 수 있습니다.");
+			throw new ForbiddenOperationException("본인 글만 수정할 수 있습니다.");
 		}
 		post.setTitle(title != null ? title.strip() : "");
 		post.setContent(content != null ? content.strip() : "");
@@ -81,9 +83,9 @@ public class BoardService {
 	public void deletePost(Long postId) {
 		String loginId = SecurityUtils.getCurrentLoginId();
 		Post post = postRepository.findById(postId)
-			.orElseThrow(() -> new IllegalArgumentException("글이 없습니다: " + postId));
+			.orElseThrow(() -> new ResourceNotFoundException("글이 없습니다: " + postId));
 		if (!post.getWriter().getLoginId().equals(loginId)) {
-			throw new IllegalArgumentException("본인 글만 삭제할 수 있습니다.");
+			throw new ForbiddenOperationException("본인 글만 삭제할 수 있습니다.");
 		}
 		postRepository.delete(post);
 	}
@@ -92,7 +94,7 @@ public class BoardService {
 	public Long addComment(Long postId, String content) {
 		User writer = getCurrentUser();
 		Post post = postRepository.findById(postId)
-			.orElseThrow(() -> new IllegalArgumentException("글이 없습니다: " + postId));
+			.orElseThrow(() -> new ResourceNotFoundException("글이 없습니다: " + postId));
 		Comment comment = new Comment(post, writer, content);
 		return commentRepository.save(comment).getCommentId();
 	}
@@ -108,9 +110,9 @@ public class BoardService {
 	public void updateComment(Long commentId, String content) {
 		String loginId = SecurityUtils.getCurrentLoginId();
 		Comment comment = commentRepository.findById(commentId)
-			.orElseThrow(() -> new IllegalArgumentException("댓글이 없습니다: " + commentId));
+			.orElseThrow(() -> new ResourceNotFoundException("댓글이 없습니다: " + commentId));
 		if (!comment.getWriter().getLoginId().equals(loginId)) {
-			throw new IllegalArgumentException("본인 댓글만 수정할 수 있습니다.");
+			throw new ForbiddenOperationException("본인 댓글만 수정할 수 있습니다.");
 		}
 		comment.setContent(content != null ? content.strip() : "");
 		comment.setUpdatedAt(Instant.now());
@@ -121,9 +123,9 @@ public class BoardService {
 	public void deleteComment(Long commentId) {
 		String loginId = SecurityUtils.getCurrentLoginId();
 		Comment comment = commentRepository.findById(commentId)
-			.orElseThrow(() -> new IllegalArgumentException("댓글이 없습니다: " + commentId));
+			.orElseThrow(() -> new ResourceNotFoundException("댓글이 없습니다: " + commentId));
 		if (!comment.getWriter().getLoginId().equals(loginId)) {
-			throw new IllegalArgumentException("본인 댓글만 삭제할 수 있습니다.");
+			throw new ForbiddenOperationException("본인 댓글만 삭제할 수 있습니다.");
 		}
 		commentRepository.delete(comment);
 	}

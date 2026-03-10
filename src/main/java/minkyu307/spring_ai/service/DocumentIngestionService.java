@@ -1,6 +1,5 @@
 package minkyu307.spring_ai.service;
 
-import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.VectorStore;
@@ -20,12 +19,10 @@ public class DocumentIngestionService {
 
 	private final VectorStore vectorStore;
 	private final TokenTextSplitter splitter;
-	private final ChatClient titleChatClient;
 
-	public DocumentIngestionService(VectorStore vectorStore, TokenTextSplitter splitter, ChatClient.Builder chatClientBuilder) {
+	public DocumentIngestionService(VectorStore vectorStore, TokenTextSplitter splitter) {
 		this.vectorStore = vectorStore;
 		this.splitter = splitter;
-		this.titleChatClient = chatClientBuilder.build();
 	}
 
 	/**
@@ -87,47 +84,6 @@ public class DocumentIngestionService {
 	}
 
 	/**
-	 * 문서 내용을 기반으로 30자 이내 제목을 생성한다. // UI 목록 표시용
-	 */
-	private String generateTitle(String content, String filename) {
-		String fallback = (filename != null && !filename.isBlank())
-				? filename
-				: firstNCodePoints(content, 30);
-
-		String sample = content == null ? "" : content.strip();
-		if (sample.length() > 2000) {
-			sample = sample.substring(0, 2000);
-		}
-
-		try {
-			String prompt = """
-					Create a short Korean title (max 30 characters) for the following document.
-					Output ONLY the title text, no quotes, no extra words.
-
-					Document:
-					%s
-					""".formatted(sample);
-
-			String title = titleChatClient.prompt()
-					.user(prompt)
-					.call()
-					.content();
-
-			title = title == null ? "" : title.strip();
-			title = stripQuotes(title);
-			title = title.replaceAll("\\s+", " ").strip();
-
-			if (title.isBlank()) {
-				return fallback;
-			}
-			return firstNCodePoints(title, 30);
-		}
-		catch (Exception e) {
-			return fallback;
-		}
-	}
-
-	/**
 	 * 유니코드 코드포인트 기준으로 최대 N 글자까지 자른다. // 한글/이모지 안전성 고려
 	 */
 	private static String firstNCodePoints(String text, int maxCodePoints) {
@@ -142,21 +98,21 @@ public class DocumentIngestionService {
 	}
 
 	/**
-	 * 모델 출력에서 따옴표를 제거한다. // 제목 단일 라인 보장
+	 * 메타데이터의 title/filename을 우선 사용하고, 없으면 본문 앞 30자 사용. // AI 호출 없이 토큰 절감
 	 */
-	private static String stripQuotes(String text) {
-		String t = text == null ? "" : text.strip();
-		if ((t.startsWith("\"") && t.endsWith("\"")) || (t.startsWith("'") && t.endsWith("'"))) {
-			return t.substring(1, t.length() - 1).strip();
-		}
-		return t;
-	}
-
-	/** Reader가 넣은 섹션 제목(예: [1. 개요]) 대신, 첫 청크로 생성하거나 파일명을 fallback으로 사용. */
 	private String findOrGenerateTitle(List<Document> documents, Map<String, Object> baseMetadata) {
-		String filename = baseMetadata != null ? (String) baseMetadata.get("filename") : null;
-		String sample = documents.get(0).getText();
-		return generateTitle(sample, filename);
+		if (baseMetadata != null) {
+			String title = (String) baseMetadata.get("title");
+			if (title != null && !title.isBlank()) {
+				return firstNCodePoints(title, 30);
+			}
+			String filename = (String) baseMetadata.get("filename");
+			if (filename != null && !filename.isBlank()) {
+				return firstNCodePoints(filename, 30);
+			}
+		}
+		String sample = documents.isEmpty() ? "" : documents.get(0).getText();
+		return firstNCodePoints(sample != null ? sample : "", 30);
 	}
 }
 

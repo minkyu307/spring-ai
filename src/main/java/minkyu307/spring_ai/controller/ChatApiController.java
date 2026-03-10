@@ -1,15 +1,12 @@
 package minkyu307.spring_ai.controller;
 
-import minkyu307.spring_ai.dto.ApiErrorResponse;
 import minkyu307.spring_ai.dto.ChatHistoryDetailDto;
 import minkyu307.spring_ai.dto.ChatHistoryDto;
+import minkyu307.spring_ai.dto.ChatMessageResponseDto;
 import minkyu307.spring_ai.service.ChatService;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 import java.util.Map;
@@ -19,7 +16,6 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/api/chat")
-@Slf4j
 public class ChatApiController {
 
 	private final ChatService chatService;
@@ -32,74 +28,47 @@ public class ChatApiController {
 	 * AJAX로 AI 응답을 받아오는 API 엔드포인트
 	 */
 	@PostMapping("/message")
-	public ResponseEntity<Map<String, String>> sendMessage(@RequestBody Map<String, String> request) {
-		try {
-			String conversationId = request.get("conversationId");
-			String userMessage = request.get("message");
+	public ResponseEntity<ChatMessageResponseDto> sendMessage(@RequestBody Map<String, String> request) {
+		String conversationId = request.get("conversationId");
+		String userMessage = request.get("message");
 
-			if (conversationId == null || conversationId.isBlank()) {
-				conversationId = java.util.UUID.randomUUID().toString();
-			}
-
-			ChatService.ChatResult result = chatService.chat(conversationId, userMessage);
-
-			return ResponseEntity.ok(Map.of(
-				"success", "true",
-				"response", result.response(),
-				"conversationId", result.conversationId()
-			));
-		} catch (Exception e) {
-			log.error("Send message failed", e);
-			String msg = (e.getMessage() != null && !e.getMessage().isBlank()) ? e.getMessage() : "메시지 전송 중 오류가 발생했습니다.";
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
-				"success", "false",
-				"error", msg
-			));
+		if (userMessage == null || userMessage.isBlank()) {
+			throw new IllegalArgumentException("message는 필수입니다.");
 		}
+
+		if (conversationId == null || conversationId.isBlank()) {
+			conversationId = java.util.UUID.randomUUID().toString();
+		}
+
+		ChatService.ChatResult result = chatService.chat(conversationId, userMessage);
+
+		return ResponseEntity.ok(new ChatMessageResponseDto(result.conversationId(), result.response()));
 	}
 
 	/**
 	 * 모든 채팅 히스토리 목록 조회
 	 */
 	@GetMapping("/histories")
-	public ResponseEntity<?> getAllHistories() {
-		try {
-			List<ChatHistoryDto> histories = chatService.findAllHistories();
-			return ResponseEntity.ok(histories);
-		} catch (Exception e) {
-			log.error("Error getting all histories", e);
-			String msg = (e.getMessage() != null && !e.getMessage().isBlank()) ? e.getMessage() : "히스토리 목록 조회 중 오류가 발생했습니다.";
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiErrorResponse(msg));
-		}
+	public ResponseEntity<List<ChatHistoryDto>> getAllHistories() {
+		List<ChatHistoryDto> histories = chatService.findAllHistories();
+		return ResponseEntity.ok(histories);
 	}
 
 	/**
 	 * 특정 대화의 메시지 목록 조회
 	 */
 	@GetMapping("/histories/{conversationId}")
-	public ResponseEntity<?> getHistoryMessages(@PathVariable String conversationId) {
-		try {
-			ChatHistoryDetailDto history = chatService.findHistoryMessages(conversationId);
-			return ResponseEntity.ok(history);
-		} catch (Exception e) {
-			log.error("Error getting history messages", e);
-			String msg = (e.getMessage() != null && !e.getMessage().isBlank()) ? e.getMessage() : "메시지 목록 조회 중 오류가 발생했습니다.";
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiErrorResponse(msg));
-		}
+	public ResponseEntity<ChatHistoryDetailDto> getHistoryMessages(@PathVariable String conversationId) {
+		ChatHistoryDetailDto history = chatService.findHistoryMessages(conversationId);
+		return ResponseEntity.ok(history);
 	}
 
 	/**
 	 * 특정 대화 삭제 (chat_conversation + spring_ai_chat_memory 메시지 함께 제거)
 	 */
 	@DeleteMapping("/histories/{conversationId}")
-	public ResponseEntity<?> deleteHistory(@PathVariable String conversationId) {
-		try {
-			chatService.deleteConversation(conversationId);
-			return ResponseEntity.noContent().build();
-		} catch (Exception e) {
-			log.error("Error deleting history", e);
-			String msg = (e.getMessage() != null && !e.getMessage().isBlank()) ? e.getMessage() : "대화 삭제 중 오류가 발생했습니다.";
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiErrorResponse(msg));
-		}
+	public ResponseEntity<Void> deleteHistory(@PathVariable String conversationId) {
+		chatService.deleteConversation(conversationId);
+		return ResponseEntity.noContent().build();
 	}
 }

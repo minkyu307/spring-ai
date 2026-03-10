@@ -763,7 +763,7 @@
             <div class="header-title">Documents</div>
             <div class="header-actions">
                 <form th:action="@{/logout}" method="post">
-                    <button type="submit" class="btn-logout">Logout</button>
+                    <button type="submit" class="btn-logout">로그아웃</button>
                 </form>
             </div>
         </div>
@@ -875,7 +875,7 @@
                         </button>
                     </div>
                     <div class="card-desc">
-                        두레이 Wiki 페이지를 Vector DB에 적재
+                        두레이 Wiki 페이지를 트리형태로 읽어 Vector DB에 적재
                     </div>
                 </div>
             </aside>
@@ -1876,10 +1876,10 @@
                     return;
                 }
 
-                // 적재 버튼에서 참조할 수 있도록 모듈 스코프에 저장
+                // 적재 버튼에서 참조할 수 있도록 모듈 스코프에 저장. 모든 페이지 로딩 완료 전까지 버튼 비활성화
                 currentPreviewPages = pages;
-                wikiIngestBtn.disabled = false;
-                setWikiIngestStatus('');
+                wikiIngestBtn.disabled = true;
+                setWikiIngestStatus(`페이지 내용 로딩 중... (0/${pages.length})`, '');
 
                 // 다이얼로그 열기
                 wikiPreviewBackdrop.classList.add('open');
@@ -1934,13 +1934,19 @@
                         }
                     }));
 
+                    // 로딩 진행률 표시 (한 페이지라도 로딩 중이면 푸터에 표시)
+                    const loadedCount = Math.min(i + chunk.length, pages.length);
+                    setWikiIngestStatus(`페이지 내용 로딩 중... (${loadedCount}/${pages.length})`, '');
+
                     // 청크 간 최소 간격 (마지막 청크 이후는 불필요)
                     if (i + CONCURRENCY < pages.length) {
                         await new Promise(r => setTimeout(r, MIN_DELAY_MS));
                     }
                 }
 
-                // 모두 로드 완료 후 현재 탭 재렌더링
+                // 모두 로드 완료 후 버튼 활성화 및 현재 탭 재렌더링
+                setWikiIngestStatus('', '');
+                wikiIngestBtn.disabled = false;
                 renderPreviewContent(pages[activeTab], contents[activeTab]);
             }
         </script>
