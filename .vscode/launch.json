@@ -10,6 +10,14 @@
             "request": "launch",
             "mainClass": "minkyu307.spring_ai.SpringAiApplication",
             "projectName": "spring-ai"
+        },
+        {
+            "type": "java",
+            "name": "SpringAiApplication-home",
+            "request": "launch",
+            "mainClass": "minkyu307.spring_ai.SpringAiApplication",
+            "projectName": "spring-ai",
+            "args": "--spring.profiles.active=home"
         }
     ]
 }
