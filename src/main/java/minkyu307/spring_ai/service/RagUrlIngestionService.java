@@ -159,19 +159,32 @@ public class RagUrlIngestionService {
 				String value = token.substring("filename*=".length()).trim();
 				int idx = value.indexOf("''");
 				String encoded = idx >= 0 ? value.substring(idx + 2) : value;
-				String decoded = URLDecoder.decode(trimQuotes(encoded), StandardCharsets.UTF_8);
+				String decoded = decodeFilenameValue(trimQuotes(encoded));
 				if (!decoded.isBlank()) {
 					return decoded;
 				}
 			}
 			if (token.toLowerCase(Locale.ROOT).startsWith("filename=")) {
-				String value = trimQuotes(token.substring("filename=".length()).trim());
+				String value = decodeFilenameValue(trimQuotes(token.substring("filename=".length()).trim()));
 				if (!value.isBlank()) {
 					return value;
 				}
 			}
 		}
 		return null;
+	}
+
+	private static String decodeFilenameValue(String value) {
+		if (value == null || value.isBlank()) {
+			return value;
+		}
+		try {
+			return URLDecoder.decode(value, StandardCharsets.UTF_8);
+		}
+		catch (IllegalArgumentException e) {
+			// 깨진 percent-encoding이 들어와도 원본 값을 유지한다.
+			return value;
+		}
 	}
 
 	private static String trimQuotes(String value) {
