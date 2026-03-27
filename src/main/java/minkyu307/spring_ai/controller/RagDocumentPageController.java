@@ -11,7 +11,7 @@ public class RagDocumentPageController {
 
 	@GetMapping("/rag/documents")
 	public String ragDocumentsPage() {
-		return "rag-documents";
+		return "redirect:/app/note";
 	}
 }
 

@@ -26,7 +26,12 @@ import java.util.stream.Collectors;
 @Service
 public class ChatService {
 
+    private static final String DEFAULT_CONVERSATION_TITLE = "새 대화";
+    private static final int TITLE_SUMMARY_MAX_CHARS = 30;
+    private static final int TITLE_SUMMARY_INPUT_MAX_CHARS = 1200;
+
     private final ChatClient chatClient;
+    private final ChatClient titleChatClient;
     private final ChatMemoryJdbcQueryRepository chatMemoryJdbcQueryRepository;
     private final ChatConversationRepository chatConversationRepository;
 
@@ -42,6 +47,7 @@ public class ChatService {
                 .build())
             .build();
 
+        this.titleChatClient = chatClientBuilder.build();
         this.chatClient = chatClientBuilder
             .defaultAdvisors(
                 MessageChatMemoryAdvisor.builder(chatMemory).build(),
@@ -66,12 +72,10 @@ public class ChatService {
 
         final String resolvedId = isOtherOwner ? java.util.UUID.randomUUID().toString() : conversationId;
 
-        chatConversationRepository.findById(resolvedId).ifPresentOrElse(
-            conv -> { /* 이미 본인 소유 대화 — 아무것도 하지 않음 */ },
-            () -> {
-                String title = userMessage.length() > 50 ? userMessage.substring(0, 50) + "..." : userMessage;
-                chatConversationRepository.save(new ChatConversation(resolvedId, loginId, title));
-            });
+        boolean isNewConversation = chatConversationRepository.findById(resolvedId).isEmpty();
+        if (isNewConversation) {
+            chatConversationRepository.save(new ChatConversation(resolvedId, loginId, DEFAULT_CONVERSATION_TITLE));
+        }
 
         String response = chatClient.prompt()
             .user(userMessage)
@@ -80,6 +84,10 @@ public class ChatService {
                 .param(QuestionAnswerAdvisor.FILTER_EXPRESSION, "loginId == '" + loginId + "'"))
             .call()
             .content();
+
+        if (isNewConversation) {
+            updateConversationTitle(resolvedId, loginId, response);
+        }
 
         return new ChatResult(resolvedId, response);
     }
@@ -108,10 +116,16 @@ public class ChatService {
         return chatMemoryJdbcQueryRepository.findHistorySummariesByLoginId(loginId).stream()
             .map(summary -> {
                 String conversationId = summary.conversationId();
-                String firstMessage = summary.firstUserMessage();
-                String title = firstMessage != null && firstMessage.length() > 50
-                    ? firstMessage.substring(0, 50) + "..."
-                    : (firstMessage != null ? firstMessage : "새 대화");
+                String conversationTitle = summary.conversationTitle();
+                String title;
+                if (conversationTitle != null && !conversationTitle.isBlank()) {
+                    title = conversationTitle;
+                } else {
+                    String firstMessage = summary.firstUserMessage();
+                    title = firstMessage != null && firstMessage.length() > 50
+                        ? firstMessage.substring(0, 50) + "..."
+                        : (firstMessage != null ? firstMessage : DEFAULT_CONVERSATION_TITLE);
+                }
                 Instant lastUpdated = summary.lastUpdated() != null
                     ? summary.lastUpdated()
                     : Instant.now();
@@ -120,6 +134,89 @@ public class ChatService {
                 return new ChatHistoryDto(conversationId, title, lastUpdated, messageCount);
             })
             .collect(Collectors.toList());
+    }
+
+    /**
+     * 첫 AI 답변을 기반으로 30자 이내 제목을 생성해 대화 메타 정보에 저장한다.
+     */
+    private void updateConversationTitle(String conversationId, String loginId, String assistantResponse) {
+        String title = summarizeConversationTitle(assistantResponse);
+        chatConversationRepository.findByIdAndLoginId(conversationId, loginId)
+            .ifPresent(conversation -> {
+                conversation.setTitle(title);
+                chatConversationRepository.save(conversation);
+            });
+    }
+
+    /**
+     * 첫 AI 답변 텍스트를 요약 모델로 압축하고, 실패 시 응답 원문을 30자로 절단해 폴백한다.
+     */
+    private String summarizeConversationTitle(String assistantResponse) {
+        String normalizedResponse = normalizeSingleLine(assistantResponse);
+        if (normalizedResponse.isBlank()) {
+            return DEFAULT_CONVERSATION_TITLE;
+        }
+
+        try {
+            String summary = titleChatClient.prompt()
+                .system("""
+                    너는 채팅 제목 생성기다.
+                    항상 한국어 제목 한 줄만 출력한다.
+                    제목은 30자 이내로 작성하고 따옴표/마침표/줄바꿈은 넣지 않는다.
+                    """)
+                .user("""
+                    다음 AI 답변의 핵심을 30자 이내 제목으로 요약해줘.
+                    답변:
+                    %s
+                    """.formatted(limitCodePoints(normalizedResponse, TITLE_SUMMARY_INPUT_MAX_CHARS)))
+                .call()
+                .content();
+
+            String normalizedSummary = normalizeTitle(summary);
+            if (!normalizedSummary.isBlank()) {
+                return limitCodePoints(normalizedSummary, TITLE_SUMMARY_MAX_CHARS);
+            }
+        } catch (Exception ignored) {
+            // 제목 요약 실패 시 아래 폴백 제목을 사용한다.
+        }
+
+        return limitCodePoints(normalizedResponse, TITLE_SUMMARY_MAX_CHARS);
+    }
+
+    /**
+     * 줄바꿈/탭을 포함한 공백을 단일 공백으로 정규화하고 앞뒤 공백을 제거한다.
+     */
+    private static String normalizeSingleLine(String text) {
+        if (text == null || text.isBlank()) {
+            return "";
+        }
+        return text.replaceAll("\\s+", " ").strip();
+    }
+
+    /**
+     * 제목에 포함될 수 있는 감싸는 따옴표를 제거하고 공백을 정리한다.
+     */
+    private static String normalizeTitle(String text) {
+        String normalized = normalizeSingleLine(text);
+        if (normalized.isBlank()) {
+            return "";
+        }
+        return normalized.replaceAll("^[\"'`“”‘’]+|[\"'`“”‘’]+$", "").strip();
+    }
+
+    /**
+     * 문자열을 코드포인트 기준으로 안전하게 절단한다.
+     */
+    private static String limitCodePoints(String text, int maxCodePoints) {
+        if (text == null || text.isBlank()) {
+            return DEFAULT_CONVERSATION_TITLE;
+        }
+        int length = text.codePointCount(0, text.length());
+        if (length <= maxCodePoints) {
+            return text;
+        }
+        int end = text.offsetByCodePoints(0, maxCodePoints);
+        return text.substring(0, end);
     }
 
     /**

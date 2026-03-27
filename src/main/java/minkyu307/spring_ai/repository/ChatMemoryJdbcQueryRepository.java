@@ -30,6 +30,7 @@ public class ChatMemoryJdbcQueryRepository {
 		String sql = """
 				SELECT
 					s.conversation_id AS conversation_id,
+					c.title AS conversation_title,
 					u.first_user_message AS first_user_message,
 					s.last_updated AS last_updated,
 					s.message_count AS message_count
@@ -41,6 +42,7 @@ public class ChatMemoryJdbcQueryRepository {
 					FROM spring_ai_chat_memory
 					GROUP BY conversation_id
 				) s
+				LEFT JOIN chat_conversation c ON c.id = s.conversation_id
 				LEFT JOIN LATERAL (
 					SELECT content AS first_user_message
 					FROM spring_ai_chat_memory
@@ -54,6 +56,7 @@ public class ChatMemoryJdbcQueryRepository {
 
 		return jdbcTemplate.query(sql, (rs, rowNum) -> new ChatHistorySummary(
 				rs.getString("conversation_id"),
+				rs.getString("conversation_title"),
 				rs.getString("first_user_message"),
 				readInstant(rs, "last_updated"),
 				rs.getLong("message_count")
@@ -67,12 +70,14 @@ public class ChatMemoryJdbcQueryRepository {
 		String sql = """
 				SELECT
 					s.conversation_id AS conversation_id,
+					s.conversation_title AS conversation_title,
 					u.first_user_message AS first_user_message,
 					s.last_updated AS last_updated,
 					s.message_count AS message_count
 				FROM (
 					SELECT
 						m.conversation_id,
+						MAX(c.title) AS conversation_title,
 						MAX(m."timestamp") AS last_updated,
 						COUNT(*) AS message_count
 					FROM spring_ai_chat_memory m
@@ -93,6 +98,7 @@ public class ChatMemoryJdbcQueryRepository {
 
 		return jdbcTemplate.query(sql, ps -> ps.setString(1, loginId), (rs, rowNum) -> new ChatHistorySummary(
 				rs.getString("conversation_id"),
+				rs.getString("conversation_title"),
 				rs.getString("first_user_message"),
 				readInstant(rs, "last_updated"),
 				rs.getLong("message_count")
@@ -167,6 +173,7 @@ public class ChatMemoryJdbcQueryRepository {
 	 */
 	public record ChatHistorySummary(
 			String conversationId,
+			String conversationTitle,
 			String firstUserMessage,
 			Instant lastUpdated,
 			long messageCount

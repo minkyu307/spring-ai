@@ -1,29 +1,25 @@
 package minkyu307.spring_ai.controller;
 
-import minkyu307.spring_ai.dto.SignUpRequest;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 /**
- * 커스텀 로그인 페이지 제공. GET /login 시 Thymeleaf 로그인 템플릿 반환.
+ * /login 요청을 SPA 로그인 경로로 리다이렉트한다.
  */
 @Controller
 public class LoginController {
 
-    @Value("${app.security.oauth2.google.visible:true}")
-    private boolean oauth2GoogleVisible;
-
     @GetMapping("/login")
-    public String loginPage(Model model) {
-        if (!model.containsAttribute("signUpRequest")) {
-            model.addAttribute("signUpRequest", new SignUpRequest());
+    public String loginPage(
+        @RequestParam(name = "error", required = false) String error,
+        @RequestParam(name = "logout", required = false) String logout) {
+        StringBuilder redirect = new StringBuilder("redirect:/app/login");
+        if (error != null) {
+            redirect.append("?error");
+        } else if (logout != null) {
+            redirect.append("?logout");
         }
-        if (!model.containsAttribute("showSignup")) {
-            model.addAttribute("showSignup", false);
-        }
-        model.addAttribute("oauth2GoogleVisible", oauth2GoogleVisible);
-        return "login";
+        return redirect.toString();
     }
 }

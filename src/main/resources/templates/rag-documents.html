@@ -139,6 +139,24 @@
             .btn-settings-cancel:hover {
                 background: #f1f3f4;
             }
+            .dialog-close-icon-btn {
+                padding: 0;
+                border: 0;
+                background: transparent;
+                color: #5f6368;
+                cursor: pointer;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 28px;
+                height: 28px;
+                border-radius: 4px;
+                line-height: 1;
+            }
+            .dialog-close-icon-btn:hover {
+                color: #202124;
+                background: #f1f3f4;
+            }
             .btn-settings-save {
                 padding: 8px 16px;
                 background: #137333;
@@ -816,7 +834,9 @@
                 <div class="wiki-upload-status" id="wikiUploadStatus"></div>
 
                 <div class="settings-actions">
-                    <button type="button" class="btn-settings-cancel" id="settingsCancelBtn">닫기</button>
+                    <button type="button" class="dialog-close-icon-btn" id="settingsCancelBtn" aria-label="닫기">
+                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                    </button>
                 </div>
             </div>
         </div>
@@ -935,7 +955,9 @@
                 <div class="wiki-preview-footer" style="flex-direction: column; align-items: stretch; gap: 8px;">
                     <div id="wikiIngestStatus" style="font-size:0.85em; min-height:1.2em;"></div>
                     <div style="display:flex; justify-content:flex-end; gap:10px;">
-                        <button type="button" class="btn-settings-cancel" id="wikiPreviewCancelBtn">닫기</button>
+                        <button type="button" class="dialog-close-icon-btn" id="wikiPreviewCancelBtn" aria-label="닫기">
+                            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                        </button>
                         <button type="button" class="btn-wiki-upload" id="wikiIngestBtn">
                             <i class="fa-solid fa-database"></i> Vector DB 적재
                         </button>

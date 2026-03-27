@@ -16,6 +16,6 @@ public class ChatController {
 	 */
 	@GetMapping
 	public String chatPage() {
-		return "chat";
+		return "redirect:/app/note";
 	}
 }

@@ -4,6 +4,7 @@ import minkyu307.spring_ai.dto.CommentDto;
 import minkyu307.spring_ai.dto.CreateCommentRequest;
 import minkyu307.spring_ai.dto.CreatePostRequest;
 import minkyu307.spring_ai.dto.PostListItemDto;
+import minkyu307.spring_ai.exception.ResourceNotFoundException;
 import minkyu307.spring_ai.service.BoardService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -35,9 +36,10 @@ public class BoardApiController {
 	/** 게시글 상세 조회 (댓글 포함) */
 	@GetMapping("/posts/{postId}")
 	public ResponseEntity<?> getPost(@PathVariable Long postId) {
-		return boardService.findPostById(postId)
-			.map(ResponseEntity::ok)
-			.orElse(ResponseEntity.notFound().build());
+		return ResponseEntity.ok(
+			boardService.findPostById(postId)
+				.orElseThrow(() -> new ResourceNotFoundException("글이 없습니다: " + postId))
+		);
 	}
 
 	/** 게시글 작성 */

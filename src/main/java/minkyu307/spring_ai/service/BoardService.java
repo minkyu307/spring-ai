@@ -6,12 +6,15 @@ import minkyu307.spring_ai.dto.PostListItemDto;
 import minkyu307.spring_ai.entity.Comment;
 import minkyu307.spring_ai.entity.Post;
 import minkyu307.spring_ai.entity.User;
+import minkyu307.spring_ai.error.ApiErrorCode;
+import minkyu307.spring_ai.error.ApiException;
 import minkyu307.spring_ai.exception.ForbiddenOperationException;
 import minkyu307.spring_ai.exception.ResourceNotFoundException;
 import minkyu307.spring_ai.repository.CommentRepository;
 import minkyu307.spring_ai.repository.PostRepository;
 import minkyu307.spring_ai.repository.UserRepository;
 import minkyu307.spring_ai.security.SecurityUtils;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,7 +46,11 @@ public class BoardService {
 	private User getCurrentUser() {
 		String loginId = SecurityUtils.getCurrentLoginId();
 		return userRepository.findById(loginId)
-			.orElseThrow(() -> new IllegalStateException("사용자를 찾을 수 없습니다: " + loginId));
+			.orElseThrow(() -> new ApiException(
+				HttpStatus.UNAUTHORIZED,
+				ApiErrorCode.UNAUTHORIZED,
+				"사용자를 찾을 수 없습니다: " + loginId
+			));
 	}
 
 	@Transactional

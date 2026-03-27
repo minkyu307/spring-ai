@@ -5,6 +5,7 @@ import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import minkyu307.spring_ai.entity.User;
 import minkyu307.spring_ai.entity.UserDoorayApiKey;
+import minkyu307.spring_ai.exception.ResourceNotFoundException;
 import minkyu307.spring_ai.repository.UserDoorayApiKeyRepository;
 import minkyu307.spring_ai.repository.UserRepository;
 import minkyu307.spring_ai.security.SecurityUtils;
@@ -53,7 +54,7 @@ public class UserSettingsApiController {
         UserDoorayApiKey entity = doorayApiKeyRepository.findById(loginId)
             .orElseGet(() -> {
                 User user = userRepository.findById(loginId)
-                    .orElseThrow(() -> new IllegalStateException("사용자를 찾을 수 없습니다: " + loginId));
+					.orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다: " + loginId));
                 return new UserDoorayApiKey(user, apiKey);
             });
         entity.setApiKey(apiKey);

@@ -4,8 +4,11 @@ import lombok.RequiredArgsConstructor;
 import minkyu307.spring_ai.dto.SignUpRequest;
 import minkyu307.spring_ai.entity.Role;
 import minkyu307.spring_ai.entity.User;
+import minkyu307.spring_ai.error.ApiErrorCode;
+import minkyu307.spring_ai.error.ApiException;
 import minkyu307.spring_ai.repository.RoleRepository;
 import minkyu307.spring_ai.repository.UserRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,7 +35,11 @@ public class SignUpService {
             throw new DuplicateLoginIdException("이미 사용 중인 아이디입니다.");
         }
         Role role = roleRepository.findByName(DEFAULT_ROLE_NAME)
-            .orElseThrow(() -> new IllegalStateException("Role " + DEFAULT_ROLE_NAME + " not found."));
+			.orElseThrow(() -> new ApiException(
+				HttpStatus.INTERNAL_SERVER_ERROR,
+				ApiErrorCode.INTERNAL_SERVER_ERROR,
+				"회원가입 기본 권한 구성이 올바르지 않습니다."
+			));
         String encodedPassword = passwordEncoder.encode(request.getPassword());
         User user = new User(
             request.getLoginId(),
@@ -44,9 +51,9 @@ public class SignUpService {
     }
 
     /** loginId 중복 시 사용. */
-    public static class DuplicateLoginIdException extends RuntimeException {
+	public static class DuplicateLoginIdException extends ApiException {
         public DuplicateLoginIdException(String message) {
-            super(message);
+			super(HttpStatus.BAD_REQUEST, ApiErrorCode.DUPLICATE_LOGIN_ID, message);
         }
     }
 }

@@ -4,6 +4,7 @@ import minkyu307.spring_ai.dto.RagDocumentListItemDto;
 import minkyu307.spring_ai.dto.RagMultiFileIngestResponse;
 import minkyu307.spring_ai.dto.RagUrlIngestRequest;
 import minkyu307.spring_ai.dto.RagWikiIngestRequest;
+import minkyu307.spring_ai.exception.ResourceNotFoundException;
 import minkyu307.spring_ai.service.RagDocumentManagementService;
 import minkyu307.spring_ai.service.RagFileUploadService;
 import minkyu307.spring_ai.service.RagUrlIngestionService;
@@ -77,7 +78,7 @@ public class RagDocumentController {
 	@DeleteMapping("/{docId}")
 	public ResponseEntity<Void> delete(@PathVariable String docId) {
 		if (!managementService.deleteDocument(docId)) {
-			return ResponseEntity.notFound().build();
+			throw new ResourceNotFoundException("문서를 찾을 수 없습니다: " + docId);
 		}
 		return ResponseEntity.noContent().build();
 	}

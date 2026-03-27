@@ -2,15 +2,20 @@ package minkyu307.spring_ai.service;
 
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import minkyu307.spring_ai.error.ApiErrorCode;
+import minkyu307.spring_ai.error.ApiException;
 import minkyu307.spring_ai.repository.UserDoorayApiKeyRepository;
 import minkyu307.spring_ai.security.SecurityUtils;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 /**
@@ -55,17 +60,61 @@ public class DoorayWikiApiClient {
                 );
             } catch (HttpClientErrorException.TooManyRequests e) {
                 if (attempt == MAX_RETRY) {
-                    throw e;
+                    throw new ApiException(
+                        HttpStatus.TOO_MANY_REQUESTS,
+                        ApiErrorCode.DOORAY_RATE_LIMIT,
+                        null
+                    );
                 }
                 try {
                     Thread.sleep(RETRY_DELAY_MS);
                 } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
-                    throw new RuntimeException(ie);
+                    throw new ApiException(
+                        HttpStatus.INTERNAL_SERVER_ERROR,
+                        ApiErrorCode.INTERNAL_SERVER_ERROR,
+                        "Dooray API 재시도 처리 중 인터럽트가 발생했습니다."
+                    );
                 }
+            } catch (HttpClientErrorException.Unauthorized e) {
+                throw new ApiException(
+                    HttpStatus.BAD_REQUEST,
+                    ApiErrorCode.DOORAY_UNAUTHORIZED,
+                    null
+                );
+            } catch (HttpClientErrorException.Forbidden e) {
+                throw new ApiException(
+                    HttpStatus.FORBIDDEN,
+                    ApiErrorCode.DOORAY_FORBIDDEN,
+                    null
+                );
+            } catch (HttpClientErrorException e) {
+                throw new ApiException(
+                    HttpStatus.BAD_GATEWAY,
+                    ApiErrorCode.DOORAY_RESPONSE_ERROR,
+                    e.getStatusText(),
+                    Map.of("doorayStatus", e.getStatusCode().value())
+                );
+            } catch (HttpServerErrorException e) {
+                throw new ApiException(
+                    HttpStatus.BAD_GATEWAY,
+                    ApiErrorCode.DOORAY_SERVER_ERROR,
+                    e.getStatusText(),
+                    Map.of("doorayStatus", e.getStatusCode().value())
+                );
+            } catch (ResourceAccessException e) {
+                throw new ApiException(
+                    HttpStatus.BAD_GATEWAY,
+                    ApiErrorCode.DOORAY_NETWORK_ERROR,
+                    "Dooray API 네트워크 연결에 실패했습니다."
+                );
             }
         }
-        throw new IllegalStateException("Dooray Wiki 조회 재시도 처리 중 예기치 않은 상태입니다.");
+        throw new ApiException(
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            ApiErrorCode.INTERNAL_SERVER_ERROR,
+            "Dooray API 재시도 처리 중 예기치 않은 상태입니다."
+        );
     }
 
     /**
@@ -75,7 +124,11 @@ public class DoorayWikiApiClient {
         String loginId = SecurityUtils.getCurrentLoginId();
         String apiKey = doorayApiKeyRepository.findById(loginId)
             .map(k -> k.getApiKey())
-            .orElseThrow(() -> new IllegalStateException("두레이 API 키가 설정되지 않았습니다."));
+            .orElseThrow(() -> new ApiException(
+                HttpStatus.BAD_REQUEST,
+                ApiErrorCode.DOORAY_UNAUTHORIZED,
+                "두레이 API 키가 설정되지 않았습니다."
+            ));
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", "dooray-api " + apiKey);
         return headers;

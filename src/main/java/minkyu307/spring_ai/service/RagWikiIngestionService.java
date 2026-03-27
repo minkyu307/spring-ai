@@ -3,8 +3,11 @@ package minkyu307.spring_ai.service;
 import lombok.RequiredArgsConstructor;
 import minkyu307.spring_ai.dto.RagWikiIngestRequest;
 import minkyu307.spring_ai.dto.RagWikiIngestResponse;
+import minkyu307.spring_ai.error.ApiErrorCode;
+import minkyu307.spring_ai.error.ApiException;
 import minkyu307.spring_ai.security.SecurityUtils;
 import org.springframework.ai.document.Document;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -73,10 +76,22 @@ public class RagWikiIngestionService {
         String url = DOORAY_BASE + "/wiki/v1/wikis/" + ref.wikiId() + "/pages/" + ref.pageId();
         Map<String, Object> resp = doorayWikiApiClient.getWithRetry(url).getBody();
 
-        if (resp == null) throw new IllegalStateException("두레이 API 응답이 없습니다.");
+        if (resp == null) {
+            throw new ApiException(
+                HttpStatus.BAD_GATEWAY,
+                ApiErrorCode.DOORAY_RESPONSE_ERROR,
+                "두레이 API 응답이 없습니다."
+            );
+        }
 
         Map<String, Object> result = (Map<String, Object>) resp.get("result");
-        if (result == null) throw new IllegalStateException("두레이 API result 필드가 없습니다.");
+        if (result == null) {
+            throw new ApiException(
+                HttpStatus.BAD_GATEWAY,
+                ApiErrorCode.DOORAY_RESPONSE_ERROR,
+                "두레이 API result 필드가 없습니다."
+            );
+        }
 
         String subject = (String) result.getOrDefault("subject", ref.pageId());
         Map<String, Object> body = (Map<String, Object>) result.getOrDefault("body", Map.of());

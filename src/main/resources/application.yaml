@@ -8,19 +8,13 @@ server:
 spring:
   application:
     name: spring-ai
+  web:
+    resources:
+      static-locations: classpath:/META-INF/resources/,classpath:/resources/,classpath:/static/,classpath:/public/,file:src/main/resources/static/
   servlet:
     multipart:
       max-file-size: 10MB   # 단일 파일 최대 10MB
       max-request-size: 100MB   # 요청 본문 전체 최대 100MB
-  # Phase 1: Google OIDC 로그인 (값은 환경변수로 설정, 저장소에 시크릿 커밋 금지)
-  security:
-    oauth2:
-      client:
-        registration:
-          google:
-            client-id: ${GOOGLE_CLIENT_ID}
-            client-secret: ${GOOGLE_CLIENT_SECRET}
-            scope: openid, profile, email
   datasource:
     url: jdbc:postgresql://10.253.12.78:25434/spring_ai
     username: spring_ai
