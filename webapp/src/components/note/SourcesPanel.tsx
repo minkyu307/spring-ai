@@ -830,11 +830,11 @@ export function SourcesPanel({
                   )}
                 </div>
                 <div className="source-upload-actions">
-                  <button className="btn btn-primary" type="button" onClick={() => inputRef.current?.click()}>
+                  <button className="btn btn-secondary" type="button" onClick={() => inputRef.current?.click()}>
                     파일 선택
                   </button>
                   <button
-                    className="btn btn-secondary"
+                    className="btn btn-primary"
                     type="button"
                     disabled={pendingFiles.length === 0}
                     onClick={() => void uploadPendingFiles()}

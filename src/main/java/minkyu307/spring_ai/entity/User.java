@@ -14,8 +14,6 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.OnDelete;
-import org.hibernate.annotations.OnDeleteAction;
 
 /**
  * 사용자 엔티티. Role과 N:1 관계(한 사용자당 역할 하나).
@@ -53,7 +51,6 @@ public class User {
 			foreignKey = @ForeignKey(
 					name = "fk_app_user_role",
 					foreignKeyDefinition = "FOREIGN KEY (role_id) REFERENCES app_role(id) ON UPDATE CASCADE ON DELETE CASCADE"))
-	@OnDelete(action = OnDeleteAction.CASCADE)
 	private Role role;
 
 	public User(String loginId, String username, String password, Role role) {

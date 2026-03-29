@@ -14,8 +14,6 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.OnDelete;
-import org.hibernate.annotations.OnDeleteAction;
 
 /**
  * 채팅 대화 메타 정보. spring_ai_chat_memory.conversation_id 와 1:1 대응하며,
@@ -46,7 +44,6 @@ public class ChatConversation {
 			foreignKey = @ForeignKey(
 					name = "fk_chat_conversation_user",
 					foreignKeyDefinition = "FOREIGN KEY (login_id) REFERENCES app_user(login_id) ON UPDATE CASCADE ON DELETE CASCADE"))
-	@OnDelete(action = OnDeleteAction.CASCADE)
 	private User user;
 
 	@Column(name = "title", columnDefinition = "text")

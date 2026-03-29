@@ -16,8 +16,6 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.OnDelete;
-import org.hibernate.annotations.OnDeleteAction;
 
 /**
  * 댓글 엔티티. 글(Post)과 작성자(User) FK, hard delete.
@@ -43,7 +41,6 @@ public class Comment {
 			foreignKey = @ForeignKey(
 					name = "fk_board_comment_post",
 					foreignKeyDefinition = "FOREIGN KEY (post_id) REFERENCES board_post(post_id) ON UPDATE CASCADE ON DELETE CASCADE"))
-	@OnDelete(action = OnDeleteAction.CASCADE)
 	private Post post;
 
 	@ManyToOne(fetch = FetchType.LAZY)
@@ -53,7 +50,6 @@ public class Comment {
 			foreignKey = @ForeignKey(
 					name = "fk_board_comment_writer",
 					foreignKeyDefinition = "FOREIGN KEY (writer_login_id) REFERENCES app_user(login_id) ON UPDATE CASCADE ON DELETE CASCADE"))
-	@OnDelete(action = OnDeleteAction.CASCADE)
 	private User writer;
 
 	@Column(nullable = false, columnDefinition = "text")
