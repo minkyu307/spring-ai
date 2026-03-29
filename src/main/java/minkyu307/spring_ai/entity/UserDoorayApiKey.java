@@ -3,6 +3,7 @@ package minkyu307.spring_ai.entity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.MapsId;
@@ -13,6 +14,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 /**
  * 사용자별 두레이 API 키 저장 엔티티. User와 1:1 관계(PK 공유).
@@ -31,7 +34,12 @@ public class UserDoorayApiKey {
 
     @OneToOne(fetch = FetchType.LAZY)
     @MapsId
-    @JoinColumn(name = "login_id")
+    @JoinColumn(
+            name = "login_id",
+            foreignKey = @ForeignKey(
+                    name = "fk_user_dooray_api_key_user",
+                    foreignKeyDefinition = "FOREIGN KEY (login_id) REFERENCES app_user(login_id) ON UPDATE CASCADE ON DELETE CASCADE"))
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private User user;
 
     @Column(name = "api_key", nullable = false, columnDefinition = "text")

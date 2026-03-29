@@ -4,6 +4,7 @@ import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -19,6 +20,8 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 /**
  * 게시글 엔티티. 작성자(writer)는 app_user(login_id) FK, 댓글은 hard delete 시 글 삭제 시 함께 삭제.
@@ -38,7 +41,13 @@ public class Post {
 	private Long postId;
 
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "writer_login_id", nullable = false)
+	@JoinColumn(
+			name = "writer_login_id",
+			nullable = false,
+			foreignKey = @ForeignKey(
+					name = "fk_board_post_writer",
+					foreignKeyDefinition = "FOREIGN KEY (writer_login_id) REFERENCES app_user(login_id) ON UPDATE CASCADE ON DELETE CASCADE"))
+	@OnDelete(action = OnDeleteAction.CASCADE)
 	private User writer;
 
 	@Column(nullable = false, columnDefinition = "text")

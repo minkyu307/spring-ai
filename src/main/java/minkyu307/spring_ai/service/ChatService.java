@@ -11,6 +11,7 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Service;
@@ -36,7 +37,7 @@ public class ChatService {
     private final ChatConversationRepository chatConversationRepository;
 
     public ChatService(
-        ChatClient.Builder chatClientBuilder, ChatMemory chatMemory,
+        ChatClient.Builder chatClientBuilder, ChatModel chatModel, ChatMemory chatMemory,
         VectorStore vectorStore,
         ChatMemoryJdbcQueryRepository chatMemoryJdbcQueryRepository,
         ChatConversationRepository chatConversationRepository) {
@@ -47,7 +48,8 @@ public class ChatService {
                 .build())
             .build();
 
-        this.titleChatClient = chatClientBuilder.build();
+        // 제목 생성은 대화 메모리와 완전히 분리해 conversation_id=default 저장을 방지한다.
+        this.titleChatClient = ChatClient.builder(chatModel).build();
         this.chatClient = chatClientBuilder
             .defaultAdvisors(
                 MessageChatMemoryAdvisor.builder(chatMemory).build(),
@@ -64,13 +66,14 @@ public class ChatService {
      */
     public ChatResult chat(String conversationId, String userMessage) {
         String loginId = SecurityUtils.getCurrentLoginId();
+        String normalizedConversationId = normalizeConversationId(conversationId);
 
         // 이미 존재하는 대화가 다른 사용자 소유이면 새 대화로 대체한다.
-        boolean isOtherOwner = chatConversationRepository.findById(conversationId)
+        boolean isOtherOwner = chatConversationRepository.findById(normalizedConversationId)
             .map(conv -> !conv.getLoginId().equals(loginId))
             .orElse(false);
 
-        final String resolvedId = isOtherOwner ? java.util.UUID.randomUUID().toString() : conversationId;
+        final String resolvedId = isOtherOwner ? java.util.UUID.randomUUID().toString() : normalizedConversationId;
 
         boolean isNewConversation = chatConversationRepository.findById(resolvedId).isEmpty();
         if (isNewConversation) {
@@ -181,6 +184,20 @@ public class ChatService {
         }
 
         return limitCodePoints(normalizedResponse, TITLE_SUMMARY_MAX_CHARS);
+    }
+
+    /**
+     * conversation_id는 공백/기본값(default)일 때 항상 UUID로 재생성한다.
+     */
+    private static String normalizeConversationId(String conversationId) {
+        if (conversationId == null || conversationId.isBlank()) {
+            return java.util.UUID.randomUUID().toString();
+        }
+        String normalized = conversationId.strip();
+        if (ChatMemory.DEFAULT_CONVERSATION_ID.equals(normalized)) {
+            return java.util.UUID.randomUUID().toString();
+        }
+        return normalized;
     }
 
     /**

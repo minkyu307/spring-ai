@@ -91,6 +91,7 @@ public class SecurityConfig {
                     "/app", "/app/**",
                     "/css/**", "/js/**", "/images/**", "/webjars/**", "/favicon.ico").permitAll()
                 .requestMatchers("/api/auth/login-meta", "/api/auth/csrf", "/api/auth/signup").permitAll()
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .anyRequest().authenticated())
             .csrf(csrf -> csrf
                 .ignoringRequestMatchers("/api/**"))

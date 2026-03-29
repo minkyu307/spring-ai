@@ -57,5 +57,21 @@ public class RagVectorStoreJdbcRepository {
 		Long count = jdbcTemplate.queryForObject(sql, Long.class, docId, loginId);
 		return count != null && count > 0;
 	}
+
+	/**
+	 * 지정한 사용자들의 vector_store 청크를 metadata.loginId 기준으로 삭제한다.
+	 */
+	public int deleteByLoginIds(List<String> loginIds) {
+		if (loginIds == null || loginIds.isEmpty()) {
+			return 0;
+		}
+
+		String placeholders = String.join(", ", java.util.Collections.nCopies(loginIds.size(), "?"));
+		String sql = """
+				DELETE FROM vector_store
+				WHERE metadata->>'loginId' IN (%s)
+				""".formatted(placeholders);
+		return jdbcTemplate.update(sql, loginIds.toArray());
+	}
 }
 

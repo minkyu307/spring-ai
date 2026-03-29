@@ -1,11 +1,18 @@
 package minkyu307.spring_ai.controller;
 
 import jakarta.validation.Valid;
+import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import minkyu307.spring_ai.dto.AuthMeResponse;
 import minkyu307.spring_ai.dto.SignUpRequest;
+import minkyu307.spring_ai.entity.User;
+import minkyu307.spring_ai.error.ApiErrorCode;
+import minkyu307.spring_ai.error.ApiException;
+import minkyu307.spring_ai.repository.UserRepository;
 import minkyu307.spring_ai.security.SecurityUtils;
 import minkyu307.spring_ai.service.SignUpService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,16 +30,30 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthApiController {
 
     private final SignUpService signUpService;
+    private final UserRepository userRepository;
 
     /**
      * 현재 로그인 사용자 식별 정보를 반환한다.
      */
     @GetMapping("/me")
-    public ResponseEntity<Map<String, Object>> me() {
+    public ResponseEntity<AuthMeResponse> me() {
         String loginId = SecurityUtils.getCurrentLoginId();
-        return ResponseEntity.ok(Map.of(
-            "authenticated", true,
-            "loginId", loginId
+        User user = userRepository.findById(loginId)
+            .orElseThrow(() -> new ApiException(
+                HttpStatus.UNAUTHORIZED,
+                ApiErrorCode.UNAUTHORIZED,
+                "사용자를 찾을 수 없습니다: " + loginId
+            ));
+
+        List<String> roles = user.getRole() == null
+            ? List.of()
+            : List.of(user.getRole().getName());
+
+        return ResponseEntity.ok(new AuthMeResponse(
+            true,
+            user.getLoginId(),
+            user.getEmail(),
+            roles
         ));
     }
 

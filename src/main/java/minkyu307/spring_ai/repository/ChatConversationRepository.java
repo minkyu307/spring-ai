@@ -11,4 +11,6 @@ public interface ChatConversationRepository extends JpaRepository<ChatConversati
 	List<ChatConversation> findByLoginIdOrderByCreatedAtDesc(String loginId);
 
 	Optional<ChatConversation> findByIdAndLoginId(String id, String loginId);
+
+	long deleteByLoginIdIn(List<String> loginIds);
 }

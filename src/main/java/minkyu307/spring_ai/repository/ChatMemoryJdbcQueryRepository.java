@@ -169,6 +169,28 @@ public class ChatMemoryJdbcQueryRepository {
 	}
 
 	/**
+	 * 지정한 사용자들의 모든 대화 메모리를 spring_ai_chat_memory에서 삭제한다.
+	 */
+	public void deleteByLoginIds(List<String> loginIds) {
+		if (loginIds == null || loginIds.isEmpty()) {
+			return;
+		}
+
+		String placeholders = String.join(", ", java.util.Collections.nCopies(loginIds.size(), "?"));
+		String sql = """
+				DELETE FROM spring_ai_chat_memory m
+				WHERE EXISTS (
+					SELECT 1
+					FROM chat_conversation c
+					WHERE c.id = m.conversation_id
+					  AND c.login_id IN (%s)
+				)
+				""".formatted(placeholders);
+
+		jdbcTemplate.update(sql, loginIds.toArray());
+	}
+
+	/**
 	 * 히스토리 목록 요약 DTO. // Service에서 제목 트렁케이션 등 UI용 가공 수행
 	 */
 	public record ChatHistorySummary(

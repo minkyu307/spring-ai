@@ -2,7 +2,11 @@ package minkyu307.spring_ai.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import lombok.AccessLevel;
@@ -10,6 +14,8 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 /**
  * 채팅 대화 메타 정보. spring_ai_chat_memory.conversation_id 와 1:1 대응하며,
@@ -30,6 +36,18 @@ public class ChatConversation {
 
 	@Column(name = "login_id", nullable = false, columnDefinition = "text")
 	private String loginId;
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(
+			name = "login_id",
+			referencedColumnName = "login_id",
+			insertable = false,
+			updatable = false,
+			foreignKey = @ForeignKey(
+					name = "fk_chat_conversation_user",
+					foreignKeyDefinition = "FOREIGN KEY (login_id) REFERENCES app_user(login_id) ON UPDATE CASCADE ON DELETE CASCADE"))
+	@OnDelete(action = OnDeleteAction.CASCADE)
+	private User user;
 
 	@Column(name = "title", columnDefinition = "text")
 	private String title;

@@ -8,6 +8,8 @@ import { formatErrorMessage } from '../api/errors';
 type CurrentUser = {
   authenticated: boolean;
   loginId: string;
+  email: string;
+  roles: string[];
 };
 
 type CsrfPayload = {
@@ -30,6 +32,12 @@ function truncateNoteTitleForUi(title: string): string {
 }
 
 function pageMeta(pathname: string, noteHeaderTitle: string): { title: string; subtitle: string } {
+  if (pathname.startsWith('/admin')) {
+    return {
+      title: 'Admin',
+      subtitle: 'DocuSearch Administration',
+    };
+  }
   if (pathname.startsWith('/board')) {
     return {
       title: 'Board',
@@ -55,13 +63,19 @@ export function AppShell() {
     ? 'top-header notebook-top-header note-top-header'
     : 'top-header notebook-top-header';
   const meta = pageMeta(location.pathname, noteHeaderTitle);
+  const isAdmin = user?.roles.includes('ROLE_ADMIN') ?? false;
 
   useEffect(() => {
     let mounted = true;
     apiFetch<CurrentUser>('/api/auth/me')
       .then((data) => {
         if (!mounted) return;
-        setUser(data);
+        setUser({
+          authenticated: data.authenticated,
+          loginId: data.loginId,
+          email: data.email ?? '',
+          roles: Array.isArray(data.roles) ? data.roles : [],
+        });
       })
       .catch((error) => {
         if (!mounted) return;
@@ -110,6 +124,15 @@ export function AppShell() {
           </div>
         </div>
         <div className="top-header-actions">
+          {isAdmin && (
+            <button
+              className="btn btn-secondary note-header-admin-btn"
+              type="button"
+              onClick={() => navigate('/admin')}
+            >
+              Admin
+            </button>
+          )}
           <button
             className="btn btn-secondary note-header-board-btn"
             type="button"
