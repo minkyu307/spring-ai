@@ -34,3 +34,6 @@ log/
 
 ### Local / secrets (SSL cert·key) ###
 src/main/resources/ssl/
+
+### Webapp build outputs ###
+src/main/resources/static/app/

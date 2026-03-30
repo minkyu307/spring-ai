@@ -1,10 +1,16 @@
 package minkyu307.spring_ai.service;
 
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import minkyu307.spring_ai.dto.MailSendRequest;
+import minkyu307.spring_ai.entity.User;
+import minkyu307.spring_ai.repository.UserRepository;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.util.StringUtils;
 
 /**
@@ -12,12 +18,14 @@ import org.springframework.util.StringUtils;
  */
 public class SmtpMailService implements MailService {
 
-    private final JavaMailSender mailSender;
-    private final String fromAddress;
+    private static final String DEFAULT_FROM_ADDRESS = "no-reply@spring-ai.local";
 
-    public SmtpMailService(JavaMailSender mailSender, String fromAddress) {
+    private final JavaMailSender mailSender;
+    private final UserRepository userRepository;
+
+    public SmtpMailService(JavaMailSender mailSender, UserRepository userRepository) {
         this.mailSender = mailSender;
-        this.fromAddress = fromAddress;
+        this.userRepository = userRepository;
     }
 
     /**
@@ -27,10 +35,7 @@ public class SmtpMailService implements MailService {
     public void send(MailSendRequest request) {
         validateRequest(request);
         SimpleMailMessage message = new SimpleMailMessage();
-        String resolvedFromAddress = StringUtils.hasText(request.from())
-            ? request.from().strip()
-            : fromAddress;
-        message.setFrom(resolvedFromAddress);
+        message.setFrom(resolveFromAddress(request));
         message.setTo(request.to());
         message.setSubject(request.subject());
         message.setText(request.body());
@@ -63,6 +68,31 @@ public class SmtpMailService implements MailService {
         if (!StringUtils.hasText(request.body())) {
             throw new IllegalArgumentException("메일 본문이 비어 있습니다.");
         }
+    }
+
+    private String resolveFromAddress(MailSendRequest request) {
+        return resolveCurrentUserEmail()
+            .or(() -> Optional.ofNullable(request.from())
+                .filter(StringUtils::hasText)
+                .map(String::strip))
+            .orElse(DEFAULT_FROM_ADDRESS);
+    }
+
+    private Optional<String> resolveCurrentUserEmail() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || authentication.getPrincipal() == null) {
+            return Optional.empty();
+        }
+
+        Object principal = authentication.getPrincipal();
+        if (!(principal instanceof UserDetails userDetails) || !StringUtils.hasText(userDetails.getUsername())) {
+            return Optional.empty();
+        }
+
+        return userRepository.findById(userDetails.getUsername().strip())
+            .map(User::getEmail)
+            .filter(StringUtils::hasText)
+            .map(String::strip);
     }
 
 }

@@ -8,16 +8,15 @@ server:
 app:
   mail:
     enabled: true
-    from: no-reply@spring-ai.local
 
 spring:
   application:
     name: spring-ai
   mail:
-    host: ${SPRING_MAIL_HOST:}
-    port: ${SPRING_MAIL_PORT:587}
-    username: ${SPRING_MAIL_USERNAME:}
-    password: ${SPRING_MAIL_PASSWORD:}
+    host: smtp.dooray.com
+    port: 587
+    username: ${DOORAY_ACCOUNT}
+    password: ${DOORAY_PASSWORD}
     properties:
       "[mail.smtp.auth]": true
       "[mail.smtp.starttls.enable]": true
@@ -39,7 +38,7 @@ spring:
   ai:
     google:
       genai:
-        project-id: test-pj-484705
+        project-id: spring-ai-457805
         api-key: ${GEMINI_API_KEY}
         embedding:
           api-key: ${GEMINI_API_KEY}

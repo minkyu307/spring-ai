@@ -39,12 +39,19 @@ export function AdminPage() {
   const [currentLoginId, setCurrentLoginId] = useState('');
   const [statusMessage, setStatusMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const selectableUsers = useMemo(
+    () => users.filter((user) => user.loginId !== currentLoginId),
+    [currentLoginId, users],
+  );
 
   const selectedLoginIds = useMemo(
-    () => users.filter((user) => Boolean(selectedMap[user.loginId])).map((user) => user.loginId),
-    [selectedMap, users],
+    () =>
+      selectableUsers
+        .filter((user) => Boolean(selectedMap[user.loginId]))
+        .map((user) => user.loginId),
+    [selectedMap, selectableUsers],
   );
-  const allSelected = users.length > 0 && selectedLoginIds.length === users.length;
+  const allSelected = selectableUsers.length > 0 && selectedLoginIds.length === selectableUsers.length;
 
   const loadUsers = async () => {
     setLoadingUsers(true);
@@ -108,13 +115,16 @@ export function AdminPage() {
       return;
     }
     const next: Record<string, boolean> = {};
-    for (const user of users) {
+    for (const user of selectableUsers) {
       next[user.loginId] = true;
     }
     setSelectedMap(next);
   };
 
   const toggleSelectUser = (loginId: string) => {
+    if (loginId === currentLoginId) {
+      return;
+    }
     setSelectedMap((previous) => ({
       ...previous,
       [loginId]: !previous[loginId],
@@ -221,7 +231,7 @@ export function AdminPage() {
                     aria-label="전체 선택"
                     checked={allSelected}
                     onChange={toggleSelectAll}
-                    disabled={users.length === 0 || loadingUsers}
+                    disabled={selectableUsers.length === 0 || loadingUsers}
                   />
                 </th>
                 <th>아이디</th>
@@ -249,6 +259,7 @@ export function AdminPage() {
                           type="checkbox"
                           checked={Boolean(selectedMap[user.loginId])}
                           onChange={() => toggleSelectUser(user.loginId)}
+                          disabled={isCurrentUser}
                         />
                       </td>
                       <td>

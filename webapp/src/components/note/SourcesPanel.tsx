@@ -880,6 +880,18 @@ export function SourcesPanel({
                       저장
                     </button>
                   </div>
+                  <p className="dooray-api-key-guide">
+                    API Key 발급:
+                    {' '}
+                    <a
+                      className="dooray-api-key-guide-link"
+                      href="https://ligaccuver.dooray.com/setting/api/token"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      https://ligaccuver.dooray.com/setting/api/token
+                    </a>
+                  </p>
                 </div>
                 <div className="wiki-tree-section">
                   <div className="wiki-tree-header">

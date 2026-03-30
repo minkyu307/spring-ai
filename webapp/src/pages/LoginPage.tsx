@@ -70,11 +70,11 @@ export function LoginPage() {
   return (
     <div className="login-root">
       <div className="login-card">
-        <h1 className="login-title">{mode === 'login' ? '로그인' : '회원가입'}</h1>
+        <h1 className="login-title">{mode === 'login' ? 'LOGIN' : 'SIGN UP'}</h1>
 
         {mode === 'login' && signUpSuccess && <p className="success-text">{signUpSuccess}</p>}
         {mode === 'login' && hasLoginError && (
-          <p className="error-text">아이디 또는 비밀번호가 올바르지 않습니다.</p>
+          <p className="error-text">ID 또는 비밀번호가 올바르지 않습니다.</p>
         )}
         {mode === 'login' && metaError && <p className="error-text">{metaError}</p>}
 
@@ -87,7 +87,7 @@ export function LoginPage() {
                 value={meta?.csrfToken ?? ''}
               />
               <div className="form-field">
-                <label htmlFor="login-id">아이디</label>
+                <label htmlFor="login-id">ID</label>
                 <input id="login-id" name="username" required maxLength={64} />
               </div>
               <div className="form-field">
@@ -95,7 +95,7 @@ export function LoginPage() {
                 <input id="login-password" name="password" type="password" required />
               </div>
               <button className="btn btn-primary login-action-btn" type="submit">
-                로그인
+                LOGIN
               </button>
             </form>
             <button
@@ -103,14 +103,14 @@ export function LoginPage() {
               type="button"
               onClick={() => setMode('signup')}
             >
-              회원가입
+              SIGN UP
             </button>
           </>
         ) : (
           <>
             <form onSubmit={handleSignUp}>
               <div className="form-field">
-                <label>아이디</label>
+                <label>ID</label>
                 <input
                   value={signUpForm.loginId}
                   onChange={(e) => setSignUpForm((prev) => ({ ...prev, loginId: e.target.value }))}
@@ -158,7 +158,7 @@ export function LoginPage() {
               </div>
               {signUpError && <p className="error-text">{signUpError}</p>}
               <button className="btn btn-primary btn-block" type="submit" disabled={loading}>
-                가입하기
+                SIGN UP
               </button>
             </form>
             <button
