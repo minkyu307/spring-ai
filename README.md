@@ -6,7 +6,7 @@ Spring AI 기반 개인 포트폴리오 프로젝트.
 ## 1) 프로젝트 개요
 
 ### 왜 만들었는가
-- 단순 챗봇이 아니라, 실제 업무/학습 문서를 연결한 **실용형 AI 노트 제품** 구축 목표.
+- 단순 챗봇이 아니라, 실제 업무/학습 문서를 연결한 사내 데이터용 **실용형 AI 노트 제품** 구축 목표.
 - 백엔드 중심으로 시작했지만, 사용자 경험까지 검증하기 위해 React 프론트와 운영 기능(관리자/메일/배포)까지 구현.
 
 ### 어떤 문제를 해결하는가
@@ -133,3 +133,11 @@ spring-ai/
 
 - [RAG-PGVECTOR-DESIGN](docs/RAG-PGVECTOR-DESIGN.md)
 - [Dooray Wiki API Guide](api_guide/dooray_wiki_api_guide.md)
+
+## 9) 작동 예시
+<img width="1353" height="802" alt="image" src="https://github.com/user-attachments/assets/57db6e24-e9b3-4096-b50b-4a021df4ef59" />
+<img width="818" height="596" alt="image" src="https://github.com/user-attachments/assets/f886d907-04b6-42cd-bfb5-31cb7fc38d62" />
+<img width="820" height="651" alt="image" src="https://github.com/user-attachments/assets/e8037880-8162-441c-84e3-110e8cb01fff" />
+<img width="1341" height="802" alt="image" src="https://github.com/user-attachments/assets/7fe4124c-c739-4edf-bcf2-3271ea80052c" />
+
+
