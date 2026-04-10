@@ -127,6 +127,54 @@ public class ChatMemoryJdbcQueryRepository {
 	}
 
 	/**
+	 * 특정 대화의 assistant 메시지 중 content가 일치하는 최신 timestamp를 조회한다.
+	 */
+	public Instant findLatestAssistantMessageTimestampByConversationIdAndContent(String conversationId, String content) {
+		if (conversationId == null || conversationId.isBlank() || content == null) {
+			return null;
+		}
+		String sql = """
+				SELECT "timestamp" AS ts
+				FROM spring_ai_chat_memory
+				WHERE conversation_id = ?
+				  AND type = 'ASSISTANT'
+				  AND content = ?
+				ORDER BY "timestamp" DESC
+				LIMIT 1
+				""";
+		List<Instant> timestamps = jdbcTemplate.query(
+			sql,
+			ps -> {
+				ps.setString(1, conversationId);
+				ps.setString(2, content);
+			},
+			(rs, rowNum) -> readInstant(rs, "ts"));
+		return timestamps.isEmpty() ? null : timestamps.get(0);
+	}
+
+	/**
+	 * 특정 대화의 최신 assistant 메시지 timestamp를 조회한다.
+	 */
+	public Instant findLatestAssistantMessageTimestampByConversationId(String conversationId) {
+		if (conversationId == null || conversationId.isBlank()) {
+			return null;
+		}
+		String sql = """
+				SELECT "timestamp" AS ts
+				FROM spring_ai_chat_memory
+				WHERE conversation_id = ?
+				  AND type = 'ASSISTANT'
+				ORDER BY "timestamp" DESC
+				LIMIT 1
+				""";
+		List<Instant> timestamps = jdbcTemplate.query(
+			sql,
+			ps -> ps.setString(1, conversationId),
+			(rs, rowNum) -> readInstant(rs, "ts"));
+		return timestamps.isEmpty() ? null : timestamps.get(0);
+	}
+
+	/**
 	 * DB/드라이버별 timestamp 표현 차이를 흡수하여 Instant로 변환한다. // 스키마 초기화 방식(always/never)과 무관
 	 */
 	private static Instant readInstant(ResultSet rs, String columnLabel) throws SQLException {

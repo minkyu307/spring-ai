@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent, KeyboardEvent } from 'react';
-import { FiClock, FiTrash2 } from 'react-icons/fi';
+import { FiClock, FiInfo, FiTrash2 } from 'react-icons/fi';
 import { renderMarkdown } from '../../lib/markdown';
 
 export type ChatHistoryItem = {
@@ -13,6 +13,13 @@ export type ChatViewMessage = {
   id: string;
   role: 'user' | 'ai' | 'error';
   content: string;
+  sources?: ChatSourceViewItem[];
+};
+
+export type ChatSourceViewItem = {
+  sourceType: string;
+  label: string;
+  href?: string | null;
 };
 
 type ChatPanelProps = {
@@ -190,6 +197,35 @@ export function ChatPanel({
               {messages.map((item) => (
                 <div key={item.id} className={`chat-message-row ${item.role}`}>
                   <article className={`chat-message-card ${item.role}`}>
+                    {item.role === 'ai' && item.sources && item.sources.length > 0 && (
+                      <div className="chat-source-toolbar">
+                        <div className="chat-source-tooltip-wrap">
+                          <button
+                            className="chat-source-tooltip-trigger"
+                            type="button"
+                            aria-label={`답변 출처 ${item.sources.length}개 보기`}
+                          >
+                            <FiInfo aria-hidden="true" />
+                          </button>
+                          <section className="chat-source-tooltip" role="tooltip" aria-label="답변 출처 목록">
+                            <p className="chat-source-tooltip-title">Sources</p>
+                            <ul className="chat-source-tooltip-list">
+                              {item.sources.map((source, index) => (
+                                <li key={`${item.id}-source-${index}`} className="chat-source-tooltip-item">
+                                  {source.href ? (
+                                    <a href={source.href} target="_blank" rel="noreferrer">
+                                      {source.label}
+                                    </a>
+                                  ) : (
+                                    <span>{source.label}</span>
+                                  )}
+                                </li>
+                              ))}
+                            </ul>
+                          </section>
+                        </div>
+                      </div>
+                    )}
                     {item.role === 'error' ? (
                       <p>{item.content}</p>
                     ) : (

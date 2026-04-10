@@ -1,13 +1,15 @@
 package minkyu307.spring_ai.dto;
 
 import java.time.Instant;
+import java.util.List;
 
 /**
- * 채팅 메시지 정보를 담는 DTO
+ * 채팅 메시지 상세와 assistant 출처 목록을 전달하는 DTO.
  */
 public record ChatMessageDto(
-	String role,  // 메시지 역할 (user, assistant, system)
-	String content,  // 메시지 내용
-	Instant timestamp  // 메시지 시간
+	String role,
+	String content,
+	Instant timestamp,
+	List<ChatSourceDto> sources
 ) {
 }

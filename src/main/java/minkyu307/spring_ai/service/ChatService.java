@@ -3,7 +3,10 @@ package minkyu307.spring_ai.service;
 import minkyu307.spring_ai.dto.ChatHistoryDetailDto;
 import minkyu307.spring_ai.dto.ChatHistoryDto;
 import minkyu307.spring_ai.dto.ChatMessageDto;
+import minkyu307.spring_ai.dto.ChatSourceDto;
+import minkyu307.spring_ai.entity.ChatAnswerSource;
 import minkyu307.spring_ai.entity.ChatConversation;
+import minkyu307.spring_ai.repository.ChatAnswerSourceRepository;
 import minkyu307.spring_ai.repository.ChatConversationRepository;
 import minkyu307.spring_ai.repository.ChatMemoryJdbcQueryRepository;
 import minkyu307.spring_ai.security.SecurityUtils;
@@ -12,12 +15,18 @@ import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -35,12 +44,14 @@ public class ChatService {
     private final ChatClient titleChatClient;
     private final ChatMemoryJdbcQueryRepository chatMemoryJdbcQueryRepository;
     private final ChatConversationRepository chatConversationRepository;
+    private final ChatAnswerSourceRepository chatAnswerSourceRepository;
 
     public ChatService(
         ChatClient.Builder chatClientBuilder, ChatModel chatModel, ChatMemory chatMemory,
         VectorStore vectorStore,
         ChatMemoryJdbcQueryRepository chatMemoryJdbcQueryRepository,
-        ChatConversationRepository chatConversationRepository) {
+        ChatConversationRepository chatConversationRepository,
+        ChatAnswerSourceRepository chatAnswerSourceRepository) {
         QuestionAnswerAdvisor qaAdvisor = QuestionAnswerAdvisor.builder(vectorStore)
             .searchRequest(SearchRequest.builder()
                 .topK(5)
@@ -58,6 +69,7 @@ public class ChatService {
 
         this.chatMemoryJdbcQueryRepository = chatMemoryJdbcQueryRepository;
         this.chatConversationRepository = chatConversationRepository;
+        this.chatAnswerSourceRepository = chatAnswerSourceRepository;
     }
 
     /**
@@ -80,22 +92,25 @@ public class ChatService {
             chatConversationRepository.save(new ChatConversation(resolvedId, loginId, DEFAULT_CONVERSATION_TITLE));
         }
 
-        String response = chatClient.prompt()
+        ChatResponse chatResponse = chatClient.prompt()
             .user(userMessage)
             .advisors(a -> a
                 .param(ChatMemory.CONVERSATION_ID, resolvedId)
                 .param(QuestionAnswerAdvisor.FILTER_EXPRESSION, "loginId == '" + loginId + "'"))
             .call()
-            .content();
+            .chatResponse();
+        String response = extractResponseText(chatResponse);
+        List<ChatSourceDto> sources = extractSourcesFromResponse(chatResponse);
+        persistAssistantSources(resolvedId, response, sources);
 
         if (isNewConversation) {
             updateConversationTitle(resolvedId, loginId, response);
         }
 
-        return new ChatResult(resolvedId, response);
+        return new ChatResult(resolvedId, response, List.copyOf(sources));
     }
 
-    public record ChatResult(String conversationId, String response) {}
+    public record ChatResult(String conversationId, String response, List<ChatSourceDto> sources) {}
 
     /**
      * 현재 로그인 사용자 소유의 대화를 삭제한다. chat_conversation 및 spring_ai_chat_memory 메시지를 함께 제거.
@@ -106,6 +121,7 @@ public class ChatService {
         chatConversationRepository.findByIdAndLoginId(conversationId, loginId)
             .ifPresent(conv -> {
                 chatMemoryJdbcQueryRepository.deleteByConversationId(conversationId);
+                chatAnswerSourceRepository.deleteByConversationId(conversationId);
                 chatConversationRepository.delete(conv);
             });
     }
@@ -250,6 +266,15 @@ public class ChatService {
 
         List<ChatMemoryJdbcQueryRepository.ChatMemoryMessage> rows = chatMemoryJdbcQueryRepository
             .findMessagesByConversationIdOrderByTimestampAsc(conversationId);
+        Map<Instant, List<ChatSourceDto>> sourcesByTimestamp = chatAnswerSourceRepository
+            .findByConversationIdOrderByMessageTimestampAscIdAsc(conversationId).stream()
+            .collect(Collectors.groupingBy(
+                ChatAnswerSource::getMessageTimestamp,
+                LinkedHashMap::new,
+                Collectors.mapping(
+                    row -> new ChatSourceDto(row.getSourceType(), row.getLabel(), row.getHref()),
+                    Collectors.toList()
+                )));
 
         List<ChatMessageDto> messages = rows.stream()
             .map(row -> {
@@ -261,11 +286,238 @@ public class ChatService {
                 Instant timestamp = row.timestamp() != null
                     ? row.timestamp()
                     : Instant.now();
+                List<ChatSourceDto> sources = "assistant".equals(role)
+                    ? sourcesByTimestamp.getOrDefault(timestamp, List.of())
+                    : List.of();
 
-                return new ChatMessageDto(role, content, timestamp);
+                return new ChatMessageDto(role, content, timestamp, sources);
             })
             .collect(Collectors.toList());
 
         return new ChatHistoryDetailDto(conversationId, messages);
     }
+
+    /**
+     * ChatResponse 결과 본문 텍스트를 안전하게 추출한다.
+     */
+    private static String extractResponseText(ChatResponse chatResponse) {
+        if (chatResponse == null || chatResponse.getResult() == null || chatResponse.getResult().getOutput() == null) {
+            return "";
+        }
+        String text = chatResponse.getResult().getOutput().getText();
+        return text == null ? "" : text;
+    }
+
+    /**
+     * QuestionAnswerAdvisor가 반환한 문맥 문서 메타데이터에서 출처 목록을 생성한다.
+     */
+    private static List<ChatSourceDto> extractSourcesFromResponse(ChatResponse chatResponse) {
+        Object rawContext = null;
+        if (chatResponse != null && chatResponse.getResult() != null && chatResponse.getResult().getMetadata() != null) {
+            rawContext = chatResponse.getResult().getMetadata().get(QuestionAnswerAdvisor.RETRIEVED_DOCUMENTS);
+        }
+        if (rawContext == null && chatResponse != null && chatResponse.getMetadata() != null) {
+            rawContext = chatResponse.getMetadata().get(QuestionAnswerAdvisor.RETRIEVED_DOCUMENTS);
+        }
+        if (!(rawContext instanceof List<?> contexts) || contexts.isEmpty()) {
+            return List.of();
+        }
+
+        Map<String, ChatSourceDto> deduplicated = new LinkedHashMap<>();
+        for (Object context : contexts) {
+            Map<String, Object> metadata = extractDocumentMetadata(context);
+            SourceProjection projection = mapToSource(metadata);
+            if (projection == null) {
+                continue;
+            }
+            deduplicated.putIfAbsent(
+                projection.sourceKey(),
+                new ChatSourceDto(projection.sourceType(), projection.label(), projection.href()));
+        }
+        return List.copyOf(deduplicated.values());
+    }
+
+    /**
+     * assistant 최신 메시지 timestamp를 찾아 출처를 별도 테이블에 저장한다.
+     */
+    private void persistAssistantSources(String conversationId, String assistantResponse, List<ChatSourceDto> sources) {
+        if (sources == null || sources.isEmpty()) {
+            return;
+        }
+        Instant resolvedTimestamp = chatMemoryJdbcQueryRepository
+            .findLatestAssistantMessageTimestampByConversationIdAndContent(conversationId, assistantResponse);
+        if (resolvedTimestamp == null) {
+            resolvedTimestamp = chatMemoryJdbcQueryRepository
+                .findLatestAssistantMessageTimestampByConversationId(conversationId);
+        }
+        if (resolvedTimestamp == null) {
+            return;
+        }
+        Instant messageTimestamp = resolvedTimestamp;
+
+        chatAnswerSourceRepository.deleteByConversationIdAndMessageTimestamp(conversationId, messageTimestamp);
+        List<ChatAnswerSource> entities = sources.stream()
+            .map(source -> new ChatAnswerSource(
+                conversationId,
+                messageTimestamp,
+                normalizeSourceType(source.sourceType()),
+                source.label(),
+                source.href(),
+                buildStoredSourceKey(source)))
+            .collect(Collectors.toList());
+        chatAnswerSourceRepository.saveAll(entities);
+    }
+
+    /**
+     * 후보 문맥 항목에서 Document metadata를 추출한다.
+     */
+    private static Map<String, Object> extractDocumentMetadata(Object context) {
+        if (context instanceof Document document) {
+            return document.getMetadata() == null ? Map.of() : document.getMetadata();
+        }
+        if (context instanceof Map<?, ?> rawMap) {
+            Object nestedMetadata = rawMap.get("metadata");
+            if (nestedMetadata instanceof Map<?, ?> nestedMap) {
+                return castMetadataMap(nestedMap);
+            }
+            return castMetadataMap(rawMap);
+        }
+        return Map.of();
+    }
+
+    /**
+     * Object 기반 맵을 문자열 키의 메타데이터 맵으로 변환한다.
+     */
+    private static Map<String, Object> castMetadataMap(Map<?, ?> rawMap) {
+        if (rawMap == null || rawMap.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, Object> metadata = new HashMap<>();
+        rawMap.forEach((key, value) -> {
+            if (key != null) {
+                metadata.put(String.valueOf(key), value);
+            }
+        });
+        return metadata;
+    }
+
+    /**
+     * 문서 메타데이터를 규칙에 맞는 출처 형식으로 변환한다.
+     */
+    private static SourceProjection mapToSource(Map<String, Object> metadata) {
+        if (metadata == null || metadata.isEmpty()) {
+            return null;
+        }
+        String sourceType = normalizeSourceType(metadataString(metadata, "source"));
+        if (sourceType.isBlank()) {
+            return null;
+        }
+        if ("upload".equals(sourceType)) {
+            String filename = metadataString(metadata, "filename");
+            if (filename.isBlank()) {
+                return null;
+            }
+            return new SourceProjection("upload", filename, null, "upload:" + filename.toLowerCase(Locale.ROOT));
+        }
+        if ("url".equals(sourceType)) {
+            String url = firstNonBlank(
+                metadataString(metadata, "url"),
+                metadataString(metadata, "source"));
+            if (!isHttpUrl(url)) {
+                return null;
+            }
+            return new SourceProjection("url", url, url, "url:" + url);
+        }
+        if ("dooray-wiki".equals(sourceType)) {
+            String wikiId = metadataString(metadata, "wikiId");
+            String pageId = metadataString(metadata, "pageId");
+            if (wikiId.isBlank() || pageId.isBlank()) {
+                return null;
+            }
+            String doorayUrl = "https://ligaccuver.dooray.com/wiki/" + wikiId + "/" + pageId;
+            return new SourceProjection(
+                "dooray-wiki",
+                doorayUrl,
+                doorayUrl,
+                "dooray-wiki:" + wikiId + ":" + pageId);
+        }
+        return null;
+    }
+
+    /**
+     * 출처 저장용 식별 키를 구성한다.
+     */
+    private static String buildStoredSourceKey(ChatSourceDto source) {
+        String sourceType = normalizeSourceType(source.sourceType());
+        if ("upload".equals(sourceType)) {
+            return "upload:" + firstNonBlank(source.label()).toLowerCase(Locale.ROOT);
+        }
+        if ("url".equals(sourceType)) {
+            return "url:" + firstNonBlank(source.href(), source.label());
+        }
+        if ("dooray-wiki".equals(sourceType)) {
+            return "dooray-wiki:" + firstNonBlank(source.href(), source.label());
+        }
+        return sourceType + ":" + firstNonBlank(source.label(), source.href());
+    }
+
+    /**
+     * 소스 타입 문자열을 저장용 표준 값으로 정규화한다.
+     */
+    private static String normalizeSourceType(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.strip().toLowerCase(Locale.ROOT);
+    }
+
+    /**
+     * 메타데이터 값을 문자열로 안전하게 꺼낸다.
+     */
+    private static String metadataString(Map<String, Object> metadata, String key) {
+        if (metadata == null || key == null || key.isBlank()) {
+            return "";
+        }
+        Object value = metadata.get(key);
+        if (value == null) {
+            return "";
+        }
+        return String.valueOf(value).strip();
+    }
+
+    /**
+     * 여러 후보 문자열 중 첫 번째 비어있지 않은 값을 반환한다.
+     */
+    private static String firstNonBlank(String... values) {
+        if (values == null || values.length == 0) {
+            return "";
+        }
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value.strip();
+            }
+        }
+        return "";
+    }
+
+    /**
+     * URL 문자열이 http/https 형식인지 판별한다.
+     */
+    private static boolean isHttpUrl(String value) {
+        if (value == null || value.isBlank()) {
+            return false;
+        }
+        String normalized = value.strip().toLowerCase(Locale.ROOT);
+        return normalized.startsWith("http://") || normalized.startsWith("https://");
+    }
+
+    /**
+     * 출처 정규화 중간 결과 표현.
+     */
+    private record SourceProjection(
+        String sourceType,
+        String label,
+        String href,
+        String sourceKey
+    ) {}
 }

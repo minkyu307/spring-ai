@@ -5,19 +5,42 @@ import { formatErrorMessage } from '../api/errors';
 import { apiFetch } from '../api/http';
 import type { AppShellOutletContext } from '../components/AppShell';
 import { ChatPanel } from '../components/note/ChatPanel';
-import type { ChatHistoryItem, ChatViewMessage } from '../components/note/ChatPanel';
+import type { ChatHistoryItem, ChatSourceViewItem, ChatViewMessage } from '../components/note/ChatPanel';
 import { SourcesPanel } from '../components/note/SourcesPanel';
 import { StudioPanel } from '../components/note/StudioPanel';
 
+type ApiChatSource = {
+  sourceType: string;
+  label: string;
+  href?: string | null;
+};
+
 type HistoryDetail = {
   conversationId: string;
-  messages: Array<{ role: 'user' | 'assistant'; content: string }>;
+  messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string; sources?: ApiChatSource[] }>;
 };
 
 type ChatResult = {
   conversationId: string;
   response: string;
+  sources?: ApiChatSource[];
 };
+
+/**
+ * API 응답 출처 목록을 UI 렌더링 가능한 형태로 정규화한다.
+ */
+function normalizeSources(sources: ApiChatSource[] | undefined): ChatSourceViewItem[] {
+  if (!Array.isArray(sources) || sources.length === 0) {
+    return [];
+  }
+  return sources
+    .map((source) => ({
+      sourceType: typeof source.sourceType === 'string' ? source.sourceType : '',
+      label: typeof source.label === 'string' ? source.label.trim() : '',
+      href: typeof source.href === 'string' && source.href.trim() ? source.href.trim() : null,
+    }))
+    .filter((source) => source.label.length > 0);
+}
 
 /**
  * NotebookLM 스타일의 노트 3패널 화면을 구성한다.
@@ -65,7 +88,8 @@ export function NotePage() {
       }
 
       const totalLength = fullText.length;
-      const duration = Math.min(900, Math.max(240, totalLength * 12));
+      const baseDuration = Math.min(900, Math.max(240, totalLength * 12));
+      const duration = baseDuration * 4;
       const startedAt = performance.now();
       let visibleLength = 0;
 
@@ -120,6 +144,7 @@ export function NotePage() {
           id: crypto.randomUUID(),
           role: item.role === 'user' ? 'user' : 'ai',
           content: item.content,
+          sources: normalizeSources(item.sources),
         })),
       );
     },
@@ -251,7 +276,15 @@ export function NotePage() {
         localStorage.setItem('conversationId', result.conversationId);
         setProcessing(false);
         const aiMessageId = crypto.randomUUID();
-        setMessages((prev) => [...prev, { id: aiMessageId, role: 'ai', content: '' }]);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: aiMessageId,
+            role: 'ai',
+            content: '',
+            sources: normalizeSources(result.sources),
+          },
+        ]);
         await animateAiResponse(aiMessageId, result.response);
         await loadHistories();
       } catch (error) {

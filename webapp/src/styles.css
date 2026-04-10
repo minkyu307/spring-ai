@@ -1021,6 +1021,103 @@ a {
   background: #eff6ff;
 }
 
+.chat-source-toolbar {
+  margin-bottom: 6px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.chat-source-tooltip-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.chat-source-tooltip-trigger {
+  width: 24px;
+  height: 24px;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.chat-source-tooltip-trigger:hover {
+  background: #bfdbfe;
+}
+
+.chat-source-tooltip-trigger svg {
+  width: 14px;
+  height: 14px;
+}
+
+.chat-source-tooltip {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 4;
+  min-width: 220px;
+  max-width: min(70vw, 360px);
+  max-height: min(40vh, 260px);
+  overflow: auto;
+  border: 1px solid #d1d5db;
+  border-radius: 11px;
+  background: #ffffff;
+  box-shadow: 0 14px 26px rgba(17, 24, 39, 0.15);
+  padding: 10px 11px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-3px);
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease,
+    visibility 0.18s ease;
+}
+
+.chat-source-tooltip-wrap:hover .chat-source-tooltip,
+.chat-source-tooltip-wrap:focus-within .chat-source-tooltip {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.chat-source-tooltip-title {
+  margin: 0;
+  color: #374151;
+  font-size: 0.71rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.chat-source-tooltip-list {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.chat-source-tooltip-item {
+  font-size: 0.77rem;
+  line-height: 1.35;
+  color: #1f2937;
+  word-break: break-all;
+}
+
+.chat-source-tooltip-item a {
+  color: #1d4ed8;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .chat-message-card.error {
   border-color: #fecdd3;
   background: #fff1f2;

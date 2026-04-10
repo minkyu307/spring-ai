@@ -42,7 +42,10 @@ public class ChatApiController {
 
 		ChatService.ChatResult result = chatService.chat(conversationId, userMessage);
 
-		return ResponseEntity.ok(new ChatMessageResponseDto(result.conversationId(), result.response()));
+		return ResponseEntity.ok(new ChatMessageResponseDto(
+			result.conversationId(),
+			result.response(),
+			result.sources()));
 	}
 
 	/**

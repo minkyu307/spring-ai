@@ -732,7 +732,7 @@ export function SourcesPanel({
           {docs.map((item) => (
             <article className="source-item" key={item.docId}>
               <div className="source-item-main">
-                <strong>{item.title || '(untitled)'}</strong>
+                <strong title={item.title || '(untitled)'}>{item.title || '(untitled)'}</strong>
               </div>
               <button
                 className="btn btn-danger icon-action-btn"

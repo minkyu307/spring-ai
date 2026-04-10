@@ -293,7 +293,9 @@ export function DocumentsPage() {
               ) : (
                 docs.map((item) => (
                   <tr key={item.docId}>
-                    <td>{item.title || '(untitled)'}</td>
+                    <td style={{ whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+                      {item.title || '(untitled)'}
+                    </td>
                     <td>{item.filename || '-'}</td>
                     <td>{item.chunkCount}</td>
                     <td>

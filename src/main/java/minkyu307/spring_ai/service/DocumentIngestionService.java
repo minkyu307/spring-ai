@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 @Service
 public class DocumentIngestionService {
 
-	private static final int TITLE_SUMMARY_MAX_CHARS = 20;
+	private static final int TITLE_SUMMARY_MAX_CHARS = 40;
 	private static final int TITLE_SUMMARY_INPUT_MAX_CHARS = 1600;
 	private static final int TITLE_SUMMARY_SOURCE_DOC_LIMIT = 3;
 	private static final int TITLE_SUMMARY_PER_DOC_MAX_CHARS = 600;
@@ -148,7 +148,7 @@ public class DocumentIngestionService {
 	}
 
 	/**
-	 * AI에 문서 핵심 제목 생성을 요청하고 20자로 강제 절단한다.
+	 * AI에 문서 핵심 제목 생성을 요청하고 프롬프트 제약(40자 이내)을 따른다.
 	 */
 	private String summarizeTitleWithAi(String titleInput) {
 		if (titleInput == null || titleInput.isBlank()) {
@@ -159,18 +159,18 @@ public class DocumentIngestionService {
 					.system("""
 						너는 문서 제목 생성기다.
 						제목은 반드시 한 줄만 출력한다.
-						제목은 문서 핵심을 반영해 20자 이내로 작성한다.
+						제목은 문서 핵심을 반영해 40자 이내로 작성한다.
 						따옴표, 마침표, 줄바꿈, 불릿, 접두어를 넣지 않는다.
 						""")
 					.user("""
-						아래 문서를 대표하는 제목을 20자 이내로 생성해줘.
+						아래 문서를 대표하는 제목을 40자 이내로 생성해줘.
 						문서:
 						%s
 						""".formatted(limitCodePoints(titleInput, TITLE_SUMMARY_INPUT_MAX_CHARS)))
 					.call()
 					.content();
 			String normalized = normalizeTitle(summary);
-			return normalized.isBlank() ? "" : limitCodePoints(normalized, TITLE_SUMMARY_MAX_CHARS);
+			return normalized;
 		}
 		catch (Exception ignored) {
 			// 제목 생성 실패 시 본문 기반 폴백을 사용한다.
@@ -179,7 +179,7 @@ public class DocumentIngestionService {
 	}
 
 	/**
-	 * 업로드 소스 종류와 무관하게 AI 요약 제목을 생성하고, 실패 시 본문 앞 20자로 폴백한다.
+	 * 업로드 소스 종류와 무관하게 AI 요약 제목을 생성하고, 실패 시 본문 앞 40자로 폴백한다.
 	 */
 	private String findOrGenerateTitle(List<Document> documents) {
 		String titleInput = buildTitleInput(documents);
