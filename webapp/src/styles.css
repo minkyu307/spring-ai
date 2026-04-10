@@ -463,6 +463,12 @@ a {
   font-size: 0.7rem;
 }
 
+.source-item-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .muted-text {
   margin: 0;
   color: #6b7280;
@@ -506,6 +512,35 @@ a {
   height: min(82vh, 760px);
   max-height: min(82vh, 760px);
   overflow: hidden;
+}
+
+.source-summary-dialog {
+  width: min(720px, 100%);
+  max-height: 90vh;
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 24px 48px rgba(17, 24, 39, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  padding: 14px;
+  overflow: hidden;
+}
+
+.source-summary-toolbar {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.source-summary-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 3px;
 }
 
 .source-dialog-title {
@@ -818,6 +853,98 @@ a {
 .source-preview-tab-row .source-tab {
   flex: 0 0 auto;
   white-space: nowrap;
+}
+
+.source-summary-confirm-text {
+  margin: 0;
+  font-size: 0.84rem;
+  color: #374151;
+}
+
+.source-summary-target {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #f9fafb;
+  color: #111827;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.35;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.source-summary-result {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px;
+  background: #f9fafb;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.source-summary-result-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 0.72rem;
+  color: #6b7280;
+}
+
+.source-summary-result-text {
+  margin: 0;
+  color: #111827;
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
+.source-summary-result-text > :first-child {
+  margin-top: 0;
+}
+
+.source-summary-result-text > :last-child {
+  margin-bottom: 0;
+}
+
+.source-summary-result-text p {
+  margin: 0 0 8px;
+}
+
+.source-summary-result-text ul,
+.source-summary-result-text ol {
+  margin: 0 0 8px;
+  padding-left: 18px;
+}
+
+.source-summary-result-text table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 8px 0;
+  font-size: 0.82rem;
+}
+
+.source-summary-result-text th,
+.source-summary-result-text td {
+  border: 1px solid #d1d5db;
+  padding: 6px 9px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.source-summary-result-text th {
+  background: #f3f4f6;
+  font-weight: 600;
+}
+
+.source-summary-actions,
+.source-summary-status {
+  margin-top: 0;
 }
 
 .note-chat-column {

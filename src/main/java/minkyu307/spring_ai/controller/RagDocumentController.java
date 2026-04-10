@@ -1,11 +1,13 @@
 package minkyu307.spring_ai.controller;
 
 import minkyu307.spring_ai.dto.RagDocumentListItemDto;
+import minkyu307.spring_ai.dto.RagDocumentSummaryResponse;
 import minkyu307.spring_ai.dto.RagMultiFileIngestResponse;
 import minkyu307.spring_ai.dto.RagUrlIngestRequest;
 import minkyu307.spring_ai.dto.RagWikiIngestRequest;
 import minkyu307.spring_ai.exception.ResourceNotFoundException;
 import minkyu307.spring_ai.service.RagDocumentManagementService;
+import minkyu307.spring_ai.service.RagDocumentSummaryService;
 import minkyu307.spring_ai.service.RagFileUploadService;
 import minkyu307.spring_ai.service.RagUrlIngestionService;
 import minkyu307.spring_ai.service.RagWikiIngestionService;
@@ -24,17 +26,20 @@ import java.util.List;
 public class RagDocumentController {
 
 	private final RagDocumentManagementService managementService;
+	private final RagDocumentSummaryService summaryService;
 	private final RagFileUploadService fileUploadService;
 	private final RagUrlIngestionService urlIngestionService;
 	private final RagWikiIngestionService wikiIngestionService;
 
 	public RagDocumentController(
 			RagDocumentManagementService managementService,
+			RagDocumentSummaryService summaryService,
 			RagFileUploadService fileUploadService,
 			RagUrlIngestionService urlIngestionService,
 			RagWikiIngestionService wikiIngestionService
 	) {
 		this.managementService = managementService;
+		this.summaryService = summaryService;
 		this.fileUploadService = fileUploadService;
 		this.urlIngestionService = urlIngestionService;
 		this.wikiIngestionService = wikiIngestionService;
@@ -70,6 +75,14 @@ public class RagDocumentController {
 	@PostMapping("/wiki")
 	public ResponseEntity<?> ingestWiki(@RequestBody RagWikiIngestRequest request) {
 		return ResponseEntity.ok(wikiIngestionService.ingest(request));
+	}
+
+	/**
+	 * 문서를 요약한다. // 저장된 요약이 있으면 재사용하고, 없으면 생성 후 저장한다.
+	 */
+	@PostMapping("/{docId}/summary")
+	public ResponseEntity<RagDocumentSummaryResponse> summarize(@PathVariable String docId) {
+		return ResponseEntity.ok(summaryService.summarizeDocument(docId));
 	}
 
 	/**

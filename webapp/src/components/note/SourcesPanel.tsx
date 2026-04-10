@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, DragEvent } from 'react';
 import { FiTrash2, FiX } from 'react-icons/fi';
+import { FaRegEye } from 'react-icons/fa';
 import { formatErrorMessage } from '../../api/errors';
 import { apiFetch } from '../../api/http';
 import { renderMarkdown } from '../../lib/markdown';
@@ -15,6 +16,12 @@ type DocumentItem = {
   title: string;
   filename: string;
   chunkCount: number;
+};
+type DocumentSummaryResult = {
+  docId: string;
+  summary: string;
+  cached: boolean;
+  summarizedAt: string;
 };
 
 type WikiItem = { id: string; name: string };
@@ -304,6 +311,13 @@ export function SourcesPanel({
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewItems, setPreviewItems] = useState<WikiPageDetail[]>([]);
   const [previewIndex, setPreviewIndex] = useState(0);
+  const [summaryDialogOpen, setSummaryDialogOpen] = useState(false);
+  const [summaryTargetDoc, setSummaryTargetDoc] = useState<DocumentItem | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryStatus, setSummaryStatus] = useState('');
+  const [summaryText, setSummaryText] = useState('');
+  const [summaryCached, setSummaryCached] = useState(false);
+  const [summaryGeneratedAt, setSummaryGeneratedAt] = useState('');
 
   const selectedList = useMemo(() => collectCheckedWikiPages(wikiTreeNodes), [wikiTreeNodes]);
   const wikiSelectionLimitExceeded = selectedList.length > MAX_WIKI_SELECTABLE_PAGES;
@@ -339,6 +353,7 @@ export function SourcesPanel({
     if (!collapsed) return;
     setDialogOpen(false);
     setPreviewOpen(false);
+    setSummaryDialogOpen(false);
   }, [collapsed]);
 
   const addPendingFiles = (files: File[]) => {
@@ -453,6 +468,42 @@ export function SourcesPanel({
       await loadDocs();
     } catch (error) {
       setStatus(formatErrorMessage(error, '문서 삭제에 실패했습니다.'));
+    }
+  };
+
+  const openSummaryDialog = (item: DocumentItem) => {
+    setSummaryTargetDoc(item);
+    setSummaryDialogOpen(true);
+    setSummaryStatus('');
+    setSummaryText('');
+    setSummaryCached(false);
+    setSummaryGeneratedAt('');
+  };
+
+  const closeSummaryDialog = () => {
+    if (summaryLoading) return;
+    setSummaryDialogOpen(false);
+  };
+
+  const summarizeDoc = async () => {
+    if (!summaryTargetDoc) return;
+    setSummaryLoading(true);
+    setSummaryStatus('');
+    try {
+      const data = await apiFetch<DocumentSummaryResult>(
+        `/api/rag/documents/${encodeURIComponent(summaryTargetDoc.docId)}/summary`,
+        {
+          method: 'POST',
+        },
+      );
+      setSummaryText(data.summary || '(요약 결과 없음)');
+      setSummaryCached(Boolean(data.cached));
+      setSummaryGeneratedAt(data.summarizedAt || '');
+      setSummaryStatus(data.cached ? '저장된 요약을 불러왔습니다.' : '소스 요약이 완료되었습니다.');
+    } catch (error) {
+      setSummaryStatus(formatErrorMessage(error, '소스 요약에 실패했습니다.'));
+    } finally {
+      setSummaryLoading(false);
     }
   };
 
@@ -734,14 +785,24 @@ export function SourcesPanel({
               <div className="source-item-main">
                 <strong title={item.title || '(untitled)'}>{item.title || '(untitled)'}</strong>
               </div>
-              <button
-                className="btn btn-danger icon-action-btn"
-                type="button"
-                aria-label="문서 삭제"
-                onClick={() => void deleteDoc(item.docId)}
-              >
-                <FiTrash2 aria-hidden="true" />
-              </button>
+              <div className="source-item-actions">
+                <button
+                  className="btn btn-secondary icon-action-btn"
+                  type="button"
+                  aria-label="소스 요약"
+                  onClick={() => openSummaryDialog(item)}
+                >
+                  <FaRegEye aria-hidden="true" />
+                </button>
+                <button
+                  className="btn btn-danger icon-action-btn"
+                  type="button"
+                  aria-label="문서 삭제"
+                  onClick={() => void deleteDoc(item.docId)}
+                >
+                  <FiTrash2 aria-hidden="true" />
+                </button>
+              </div>
             </article>
           ))}
         </div>
@@ -978,6 +1039,56 @@ export function SourcesPanel({
               <button className="btn btn-primary" type="button" onClick={() => void ingestSelectedWiki()}>
                 Vector DB 적재
               </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {summaryDialogOpen && (
+        <div className="note-modal-backdrop" role="presentation">
+          <section
+            className="source-summary-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-label="소스 요약"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="note-panel-row">
+              <h3 className="source-dialog-title">소스 요약</h3>
+              <button className="source-dialog-close-btn" type="button" aria-label="닫기" onClick={closeSummaryDialog}>
+                <FiX aria-hidden="true" />
+              </button>
+            </div>
+            <div className="source-summary-toolbar">
+              <p className="source-summary-confirm-text">소스를 요약할까요?</p>
+              {summaryTargetDoc && (
+                <p className="source-summary-target" title={summaryTargetDoc.title || '(untitled)'}>
+                  {summaryTargetDoc.title || '(untitled)'}
+                </p>
+              )}
+              <div className="note-inline-actions note-inline-actions-right source-summary-actions">
+                <button className="btn btn-secondary" type="button" disabled={summaryLoading} onClick={closeSummaryDialog}>
+                  닫기
+                </button>
+                <button className="btn btn-primary" type="button" disabled={summaryLoading || !summaryTargetDoc} onClick={() => void summarizeDoc()}>
+                  {summaryLoading ? '요약 중...' : '요약'}
+                </button>
+              </div>
+              {summaryStatus && <p className="status-text source-summary-status">{summaryStatus}</p>}
+            </div>
+            <div className="source-summary-scroll">
+              {summaryText && (
+                <div className="source-summary-result">
+                  <div className="source-summary-result-meta">
+                    <span>{summaryCached ? '저장 요약' : '신규 요약'}</span>
+                    {summaryGeneratedAt && <span>{summaryGeneratedAt}</span>}
+                  </div>
+                  <div
+                    className="source-summary-result-text"
+                    dangerouslySetInnerHTML={{ __html: renderMarkdown(summaryText || '(요약 결과 없음)') }}
+                  />
+                </div>
+              )}
             </div>
           </section>
         </div>
